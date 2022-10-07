@@ -2,6 +2,8 @@
 using CommunityToolkit.Mvvm.Messaging;
 using FellowOakDicom.Imaging;
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 
@@ -10,28 +12,39 @@ namespace BolusEvaluator.MVVM.ViewModels;
 [ObservableObject]
 [ObservableRecipient]
 public partial class ImageViewModel {
+
     [ObservableProperty] private ImageSource? _displayImage; //Creates DisplayImage property
+
+    //window levels slider
     [ObservableProperty] private double? _lowerWindowValue;
     [ObservableProperty] private double? _upperWindowValue;
     partial void OnUpperWindowValueChanged(double? value) => RecalculateImageWindow();
     partial void OnLowerWindowValueChanged(double? value) => RecalculateImageWindow();
 
-    private DicomImage? _dicomImage;
+    //currentImage slider
+    [ObservableProperty] private int _currentFrame;
+    [ObservableProperty] private int _maxFrames;
+
+    partial void OnCurrentFrameChanged(int value) => RecalculateImageWindow();
+
+    private List<DicomImage>? _dicomImages;
 
     private bool _isBusy = false;
 
 
     private void RecalculateImageWindow() {
         if (_isBusy) return;
-        if(_dicomImage is null) return;
+        if(_dicomImages is null) return;
+        if (_dicomImages.Count < 1) return;
 
         _isBusy = true;
         var window = (UpperWindowValue - LowerWindowValue);
         var center = (LowerWindowValue + (window / 2));
+        var currentFrame = CurrentFrame;
 
         //reset window level
-        _dicomImage.WindowWidth = window is null ? 100.0f : (double)window;
-        _dicomImage.WindowCenter = center is null ? 0.0f : (double)center;
+        _dicomImages[currentFrame].WindowWidth = window is null ? 100.0f : (double)window;
+        _dicomImages[currentFrame].WindowCenter = center is null ? 0.0f : (double)center;
 
         UpdateDisplayImage();
         _isBusy = false;
@@ -40,33 +53,34 @@ public partial class ImageViewModel {
 
     public ImageViewModel() {
         WeakReferenceMessenger.Default.Register<DicomImageMessage>(this, (r, m) => {
-            ReceiveDicomMessage(m.Value);
+            LoadImages(m.Value);
         });
     }
 
-    private void ReceiveDicomMessage(DicomImage value) {
+    private void LoadImages(List<DicomImage> images) {
         try {
-            //if image is cleared
-            if(value is null) {
-                _dicomImage = null;
+            if (images == null || images.Count < 1) {
                 DisplayImage = null;
                 return;
             }
 
-            _dicomImage = value;
-
-            //create image source
-            UpdateDisplayImage();
-            
-            //update slider values
-            var range = _dicomImage.WindowWidth/2;
-            var center = _dicomImage.WindowCenter;
+            _dicomImages = images;
 
             _isBusy = true;
+            CurrentFrame = 0;
+            MaxFrames = images.Count - 1;
+
+            //update slider values
+            var range = _dicomImages[0].WindowWidth / 2;
+            var center = _dicomImages[0].WindowCenter;
+
             LowerWindowValue = center - range;
             UpperWindowValue = center + range;
-            _isBusy = false;
+            
+            //create image source
+            UpdateDisplayImage();
 
+            _isBusy = false;
 
         } catch (Exception ex) {
             MessageBox.Show("Error: " + ex.Message);
@@ -74,7 +88,7 @@ public partial class ImageViewModel {
     }
 
     private void UpdateDisplayImage() {
-        var image = _dicomImage.RenderImage().AsWriteableBitmap();
+        var image = _dicomImages[CurrentFrame].RenderImage().AsWriteableBitmap();
         DisplayImage = image;
     }
 }

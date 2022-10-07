@@ -14,8 +14,8 @@
         WindowStartupLocation="CenterScreen"
         mc:Ignorable="d"
         Title="Bolus Evaluation" 
-        Height="640" Width="800"
-        MinHeight="640" MinWidth="740">
+        Height="640" Width="900"
+        MinHeight="640" MinWidth="900">
     <mah:MetroWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </mah:MetroWindow.Resources>

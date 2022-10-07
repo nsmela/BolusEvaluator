@@ -5,16 +5,19 @@ using CommunityToolkit.Mvvm.Messaging.Messages;
 using FellowOakDicom;
 using FellowOakDicom.Imaging;
 using FellowOakDicom.Imaging.Codec;
+using FellowOakDicom.IO.Buffer;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Documents;
 
 namespace BolusEvaluator.MVVM.ViewModels;
 
-public class DicomImageMessage : ValueChangedMessage<DicomImage> {
-    public DicomImageMessage(DicomImage value) : base(value) { }
+public class DicomImageMessage : ValueChangedMessage<List<DicomImage>> {
+    public DicomImageMessage(List<DicomImage> value) : base(value) { }
 }
 
 [ObservableObject]
@@ -33,7 +36,7 @@ public partial class MainViewModel {
             //file explorer
             OpenFileDialog openFile = new() {
                 Filter = "DICOM Files (*.dcm)|*.dcm|All Files (*.*)|*.*",
-                Multiselect = false
+                Multiselect = true
             };
 
             if (openFile.ShowDialog() != true)
@@ -41,12 +44,10 @@ public partial class MainViewModel {
 
             IsBusy = true;
 
-            await Task.Delay(3000); //for testing loading circle
-
             var file = await DicomFile.OpenAsync(openFile.FileName);
 
             //generating an image
-            var image = new DicomImage(openFile.FileName);
+            var image = GetFile(openFile);
             WeakReferenceMessenger.Default.Send(new DicomImageMessage(image));
 
             //generate destails text
@@ -70,6 +71,17 @@ public partial class MainViewModel {
         });
 
         return task;
+    }
+
+    private List<DicomImage> GetFile(OpenFileDialog fileDialog) {
+        if (fileDialog.FileNames.Length == 1) return new List<DicomImage>() { new DicomImage(fileDialog.FileName) };
+
+        List<DicomImage> images = new();
+        for (int i = 0; i < fileDialog.FileNames.Length; i++) {
+            images.Add(new DicomImage(fileDialog.FileNames[i]));
+        }
+
+        return images;
     }
 }
 
