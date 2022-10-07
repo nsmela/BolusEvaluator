@@ -15,13 +15,13 @@ public partial class ImageViewModel {
     [ObservableProperty] private ImageSource? _displayImage; //Creates DisplayImage property
     [ObservableProperty] private double? _lowerWindowValue;
     [ObservableProperty] private double? _upperWindowValue;
+    partial void OnUpperWindowValueChanged(double? value) => RecalculateImageWindow();
+    partial void OnLowerWindowValueChanged(double? value) => RecalculateImageWindow();
 
     private DicomImage? _dicomImage;
 
     private bool _isBusy = false;
 
-    partial void OnUpperWindowValueChanged(double? value) => RecalculateImageWindow();
-    partial void OnLowerWindowValueChanged(double? value) => RecalculateImageWindow();
 
     private void RecalculateImageWindow() {
         if (_isBusy) return;

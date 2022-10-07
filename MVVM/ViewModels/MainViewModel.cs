@@ -7,6 +7,7 @@ using FellowOakDicom.Imaging;
 using FellowOakDicom.Imaging.Codec;
 using Microsoft.Win32;
 using System;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -33,6 +34,8 @@ public partial class MainViewModel {
                 return;
 
             IsBusy = true;
+
+            await Task.Delay(3000); //for testing loading circle
 
             var file = await DicomFile.OpenAsync(openFile.FileName);
 

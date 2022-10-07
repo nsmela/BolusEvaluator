@@ -16,7 +16,10 @@
         Title="Bolus Evaluation" 
         Height="640" Width="800"
         MinHeight="640" MinWidth="740">
-    <Grid>
+    <mah:MetroWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </mah:MetroWindow.Resources>
+    <Grid Background="DimGray">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="auto" />
@@ -25,7 +28,7 @@
         <StackPanel Grid.Column="0" >
             <Button Content="Load File" Height="40" Command="{Binding GetDicomFileCommand}" Margin="4"/>
             <mah:ProgressRing Foreground="{DynamicResource AccentColorBrush}"
-                  IsActive="{Binding IsBusy}" 
+                  Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}, FallbackValue=Hidden}"            
                   Margin="10" 
                   Width="120" Height="120"/>
         </StackPanel>
