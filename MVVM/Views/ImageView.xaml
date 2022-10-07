@@ -1,0 +1,47 @@
+﻿<UserControl x:Class="BolusEvaluator.MVVM.Views.ImageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+             xmlns:local="clr-namespace:BolusEvaluator.MVVM.Views"
+             xmlns:viewmodels="clr-namespace:BolusEvaluator.MVVM.ViewModels"
+             d:DataContext="{d:DesignInstance Type=viewmodels:ImageViewModel}"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="600">
+    <Grid Background="DimGray" Margin="4" >
+        <Border BorderBrush="Black" BorderThickness="3" CornerRadius="8">
+            <Grid >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto" />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+
+                <StackPanel Grid.Column="0"  Grid.Row="0"
+                    Height="512" Width="512"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                    
+                    <Image Source="{Binding DisplayImage}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Vertical" >
+                    <mah:RangeSlider Width="60" Height="500" Margin="10"
+                        Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        ExtendedMode="True"
+                        Minimum="-2000"
+                        Maximum="2000"                       
+                        MinRangeWidth="20"
+                        LowerValue="{Binding LowerWindowValue}"
+                        UpperValue="{Binding UpperWindowValue}"
+                        />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+
+</UserControl>
