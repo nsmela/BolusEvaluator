@@ -47,7 +47,7 @@ public partial class MainViewModel {
             var file = await DicomFile.OpenAsync(openFile.FileName);
 
             //generating an image
-            var image = GetFile(openFile);
+            var image = await GetFile(openFile);
             WeakReferenceMessenger.Default.Send(new DicomImageMessage(image));
 
             //generate destails text
@@ -73,15 +73,19 @@ public partial class MainViewModel {
         return task;
     }
 
-    private List<DicomImage> GetFile(OpenFileDialog fileDialog) {
+    private async Task<List<DicomImage>> GetFile(OpenFileDialog fileDialog) {
         if (fileDialog.FileNames.Length == 1) return new List<DicomImage>() { new DicomImage(fileDialog.FileName) };
 
-        List<DicomImage> images = new();
-        for (int i = 0; i < fileDialog.FileNames.Length; i++) {
-            images.Add(new DicomImage(fileDialog.FileNames[i]));
-        }
+        var task = await Task.Run(() => {
+            List<DicomImage> images = new();
+            for (int i = 0; i < fileDialog.FileNames.Length; i++) {
+                images.Add(new DicomImage(fileDialog.FileNames[i]));
+            }
 
-        return images;
+            return images;
+        });
+
+        return task;
     }
 }
 
