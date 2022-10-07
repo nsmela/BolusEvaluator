@@ -2,10 +2,8 @@
 using CommunityToolkit.Mvvm.Messaging;
 using FellowOakDicom.Imaging;
 using System;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Threading;
 
 namespace BolusEvaluator.MVVM.ViewModels;
 
