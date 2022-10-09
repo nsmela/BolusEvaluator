@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using FellowOakDicom.Imaging;
 using System;
@@ -6,6 +7,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace BolusEvaluator.MVVM.ViewModels;
 
@@ -13,7 +15,7 @@ namespace BolusEvaluator.MVVM.ViewModels;
 [ObservableRecipient]
 public partial class ImageViewModel {
 
-    [ObservableProperty] private ImageSource? _displayImage; //Creates DisplayImage property
+    [ObservableProperty] private ImageSource? _displayImage;
 
     //window levels slider
     [ObservableProperty] private double? _lowerWindowValue;
@@ -27,10 +29,19 @@ public partial class ImageViewModel {
 
     partial void OnCurrentFrameChanged(int value) => RecalculateImageWindow();
 
+    [ObservableProperty] private double _imageScale = 1.0f;
+
+    //Commands
+    [RelayCommand]
+    public void OnImageZoom(int delta) {
+         //value should be observed and zoom handled by image's scaling transformn in viewer
+        ImageScale = Math.Clamp(ImageScale + delta * 0.1, 1.0f, 2.0f);
+        UpdateDisplayImage();
+    }
+
     private List<DicomImage>? _dicomImages;
 
     private bool _isBusy = false;
-
 
     private void RecalculateImageWindow() {
         if (_isBusy) return;
@@ -67,8 +78,12 @@ public partial class ImageViewModel {
             _dicomImages = images;
 
             _isBusy = true;
+            //images variables
             CurrentFrame = 0;
             MaxFrames = images.Count - 1;
+
+            //image scaling variables
+            _imageScale = 1.0f;
 
             //update slider values
             var range = _dicomImages[0].WindowWidth / 2;
@@ -88,8 +103,12 @@ public partial class ImageViewModel {
     }
 
     private void UpdateDisplayImage() {
-        var image = _dicomImages[CurrentFrame].RenderImage().AsWriteableBitmap();
-        DisplayImage = image;
+        TransformedBitmap result = new();
+        result.BeginInit();
+        result.Source = _dicomImages[CurrentFrame].RenderImage().AsWriteableBitmap();
+        result.Transform = new ScaleTransform(ImageScale, ImageScale);
+        result.EndInit();
+        DisplayImage = result;
     }
 }
 
