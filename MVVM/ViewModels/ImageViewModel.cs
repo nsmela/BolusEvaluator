@@ -103,6 +103,7 @@ public partial class ImageViewModel {
     }
 
     private void UpdateDisplayImage() {
+        //from https://stackoverflow.com/questions/741956/pan-zoom-image
         TransformedBitmap result = new();
         result.BeginInit();
         result.Source = _dicomImages[CurrentFrame].RenderImage().AsWriteableBitmap();
