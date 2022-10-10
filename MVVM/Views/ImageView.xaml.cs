@@ -10,8 +10,5 @@ public partial class ImageView : UserControl {
         InitializeComponent();
     }
 
-    private void Image_MouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e) {
-        viewModel.OnImageZoom(e.Delta);
-    }
 }
 

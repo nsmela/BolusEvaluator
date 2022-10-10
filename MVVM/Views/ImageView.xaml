@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
              xmlns:local="clr-namespace:BolusEvaluator.MVVM.Views"
+             xmlns:controls="clr-namespace:BolusEvaluator.Controls"
              xmlns:viewmodels="clr-namespace:BolusEvaluator.MVVM.ViewModels"
              d:DataContext="{d:DesignInstance Type=viewmodels:ImageViewModel}"
              mc:Ignorable="d" 
@@ -21,14 +22,19 @@
                     <RowDefinition />
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Column="0"  Grid.Row="0" Margin="4"
+                <Border x:Name="ParentBorder" BorderBrush="Black" BorderThickness="3"  Background="White" Margin="6" ClipToBounds="True">
+                    
+                    <StackPanel Grid.Column="0"  Grid.Row="0"
                     Height="512" Width="512"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
 
-                    <Image Source="{Binding DisplayImage}" MouseWheel="Image_MouseWheel">
-                    </Image>
-                </StackPanel>
+                        <controls:ZoomBorder>
+                            <Image Source="{Binding DisplayImage}" Margin="1">
+                            </Image>
+                        </controls:ZoomBorder>
+                    </StackPanel>
+                </Border>
 
                 <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Vertical" >
                     <mah:RangeSlider Width="60" Height="500" Margin="10"

@@ -29,16 +29,6 @@ public partial class ImageViewModel {
 
     partial void OnCurrentFrameChanged(int value) => RecalculateImageWindow();
 
-    [ObservableProperty] private double _imageScale = 1.0f;
-
-    //Commands
-    [RelayCommand]
-    public void OnImageZoom(int delta) {
-         //value should be observed and zoom handled by image's scaling transformn in viewer
-        ImageScale = Math.Clamp(ImageScale + delta * 0.1, 1.0f, 2.0f);
-        UpdateDisplayImage();
-    }
-
     private List<DicomImage>? _dicomImages;
 
     private bool _isBusy = false;
@@ -82,9 +72,6 @@ public partial class ImageViewModel {
             CurrentFrame = 0;
             MaxFrames = images.Count - 1;
 
-            //image scaling variables
-            _imageScale = 1.0f;
-
             //update slider values
             var range = _dicomImages[0].WindowWidth / 2;
             var center = _dicomImages[0].WindowCenter;
@@ -103,13 +90,7 @@ public partial class ImageViewModel {
     }
 
     private void UpdateDisplayImage() {
-        //from https://stackoverflow.com/questions/741956/pan-zoom-image
-        TransformedBitmap result = new();
-        result.BeginInit();
-        result.Source = _dicomImages[CurrentFrame].RenderImage().AsWriteableBitmap();
-        result.Transform = new ScaleTransform(ImageScale, ImageScale);
-        result.EndInit();
-        DisplayImage = result;
+        DisplayImage = _dicomImages[CurrentFrame].RenderImage().AsWriteableBitmap();
     }
 }
 
