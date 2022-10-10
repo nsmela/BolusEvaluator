@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BolusEvaluator.MVVM.ViewModels;
+using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -46,6 +47,7 @@ public class ZoomBorder : Border {
             this.MouseWheel += child_MouseWheel;
             this.MouseRightButtonDown += child_MouseRightButtonDown;
             this.MouseRightButtonUp += child_MouseRightButtonUp;
+            this.MouseLeftButtonDown += child_MouseLeftButtonDown;
             this.MouseMove += child_MouseMove;
         }
     }
@@ -100,6 +102,14 @@ public class ZoomBorder : Border {
         }
     }
 
+    private void child_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+        if (child != null) {
+            var point = GetImageCoordsAt(e);
+            var viewModel = ((ImageViewModel)base.DataContext);
+            viewModel.UpdateMousePoint(point);
+        }
+    }
+
     private void child_MouseRightButtonUp(object sender, MouseButtonEventArgs e) {
         if (child != null) {
             child.ReleaseMouseCapture();
@@ -118,5 +128,19 @@ public class ZoomBorder : Border {
         }
     }
 
+    public Point GetImageCoordsAt(MouseButtonEventArgs e) {
+        if (child != null && child.IsMouseOver) {
+            var controlSpacePosition = e.GetPosition(child);
+            var imageControl = this.Child as Image;
+            if (imageControl != null && imageControl.Source != null) {
+                // Convert from control space to image space
+                var x = Math.Floor(controlSpacePosition.X * imageControl.Source.Width / imageControl.ActualWidth);
+                var y = Math.Floor(controlSpacePosition.Y * imageControl.Source.Height / imageControl.ActualHeight);
+
+                return new Point(x, y);
+            }
+        }
+        return new Point(-1, -1);
+    }
     #endregion
 }

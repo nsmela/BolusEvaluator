@@ -30,8 +30,19 @@
                     VerticalAlignment="Center">
 
                         <controls:ZoomBorder>
-                            <Image Source="{Binding DisplayImage}" Margin="1">
-                            </Image>
+                            <Image Stretch="None">
+                            <Image.Source>
+                                <DrawingImage >
+                                    <DrawingImage.Drawing>
+                                        <DrawingGroup>
+
+                                            <ImageDrawing Rect="0,0,512,512" ImageSource="{Binding DisplayImage}"/>
+
+                                        </DrawingGroup>
+                                    </DrawingImage.Drawing>
+                                </DrawingImage>
+                            </Image.Source>
+                        </Image>
                         </controls:ZoomBorder>
                     </StackPanel>
                 </Border>
@@ -52,6 +63,9 @@
                         Minimum="0" Maximum="{Binding MaxFrames}"
                         Value="{Binding CurrentFrame}" mah:SliderHelper.ChangeValueBy="LargeChange"
                         />
+                <StackPanel Grid.Column="1" Grid.Row="1">
+                    <TextBlock Text="{Binding MousePointText}" />
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>

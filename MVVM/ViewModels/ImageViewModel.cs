@@ -29,6 +29,9 @@ public partial class ImageViewModel {
 
     partial void OnCurrentFrameChanged(int value) => RecalculateImageWindow();
 
+    //point on image 
+    [ObservableProperty] private string? _mousePointText;
+
     private List<DicomImage>? _dicomImages;
 
     private bool _isBusy = false;
@@ -91,6 +94,10 @@ public partial class ImageViewModel {
 
     private void UpdateDisplayImage() {
         DisplayImage = _dicomImages[CurrentFrame].RenderImage().AsWriteableBitmap();
+    }
+
+    public void UpdateMousePoint(Point mousePoint) {
+        MousePointText = $"X: {mousePoint.X}\r\nY: {mousePoint.Y}";
     }
 }
 
