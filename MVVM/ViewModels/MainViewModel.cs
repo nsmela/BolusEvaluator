@@ -50,7 +50,7 @@ public partial class MainViewModel {
             var image = await GetFile(openFile);
             WeakReferenceMessenger.Default.Send(new DicomImageMessage(image));
 
-            //generate destails text
+            //generate details text
             FileInfo = await GetAllTags(file);
             IsBusy = false;
 

@@ -98,6 +98,12 @@ public partial class ImageViewModel {
 
     public void UpdateMousePoint(Point mousePoint) {
         MousePointText = $"X: {mousePoint.X}\r\nY: {mousePoint.Y}";
+        var huValue = GetHU(mousePoint);
+    }
+
+    private double GetHU(Point point) {
+        var image = _dicomImages[CurrentFrame];
+        return 0.0f;
     }
 }
 
