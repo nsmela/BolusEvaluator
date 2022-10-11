@@ -1,7 +1,9 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using FellowOakDicom;
 using FellowOakDicom.Imaging;
+using FellowOakDicom.Imaging.Render;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -32,78 +34,87 @@ public partial class ImageViewModel {
     //point on image 
     [ObservableProperty] private string? _mousePointText;
 
-    private List<DicomImage>? _dicomImages;
+    private List<DicomDataset>? _dicomData;
 
     private bool _isBusy = false;
 
     private void RecalculateImageWindow() {
         if (_isBusy) return;
-        if(_dicomImages is null) return;
-        if (_dicomImages.Count < 1) return;
-
-        _isBusy = true;
-        var window = (UpperWindowValue - LowerWindowValue);
-        var center = (LowerWindowValue + (window / 2));
-        var currentFrame = CurrentFrame;
-
-        //reset window level
-        _dicomImages[currentFrame].WindowWidth = window is null ? 100.0f : (double)window;
-        _dicomImages[currentFrame].WindowCenter = center is null ? 0.0f : (double)center;
+        if(_dicomData is null) return;
+        if (_dicomData.Count < 1) return;
 
         UpdateDisplayImage();
-        _isBusy = false;
-            
+
     }
 
     public ImageViewModel() {
-        WeakReferenceMessenger.Default.Register<DicomImageMessage>(this, (r, m) => {
-            LoadImages(m.Value);
+        WeakReferenceMessenger.Default.Register<DicomDatasetMessage>(this, (r, m) => {
+            LoadDataset(m.Value);
         });
     }
 
-    private void LoadImages(List<DicomImage> images) {
+    private void LoadDataset(List<DicomDataset> datasets) {
+        if (datasets == null || datasets.Count < 1) {
+            DisplayImage = null;
+            _dicomData = null;
+            return;
+        }
+
+        _dicomData = datasets;
+
         try {
-            if (images == null || images.Count < 1) {
-                DisplayImage = null;
-                return;
-            }
-
-            _dicomImages = images;
-
             _isBusy = true;
-            //images variables
             CurrentFrame = 0;
-            MaxFrames = images.Count - 1;
+            MaxFrames = datasets.Count - 1;
 
-            //update slider values
-            var range = _dicomImages[0].WindowWidth / 2;
-            var center = _dicomImages[0].WindowCenter;
+            var range = _dicomData[0].GetValue<double>(DicomTag.WindowWidth, 0) / 2;
+            var center = _dicomData[0].GetValue<double>(DicomTag.WindowCenter, 0);
 
             LowerWindowValue = center - range;
             UpperWindowValue = center + range;
-            
-            //create image source
+
             UpdateDisplayImage();
 
             _isBusy = false;
-
         } catch (Exception ex) {
             MessageBox.Show("Error: " + ex.Message);
         }
     }
 
     private void UpdateDisplayImage() {
-        DisplayImage = _dicomImages[CurrentFrame].RenderImage().AsWriteableBitmap();
+        if (_dicomData is null) return;
+
+        var image = new DicomImage(_dicomData[CurrentFrame]);
+
+        var window = (UpperWindowValue - LowerWindowValue);
+        var center = (LowerWindowValue + (window / 2));
+
+        image.WindowWidth = window is null ? 100.0f : (double)window;
+        image.WindowCenter = center is null ? 0.0f : (double)center;
+
+        DisplayImage = image.RenderImage().AsWriteableBitmap();
     }
 
     public void UpdateMousePoint(Point mousePoint) {
-        MousePointText = $"X: {mousePoint.X}\r\nY: {mousePoint.Y}";
+        MousePointText = $"X: {mousePoint.X}\r\nY: {mousePoint.Y}\r\nHU: {GetHU(mousePoint)}";
         var huValue = GetHU(mousePoint);
     }
 
+    //https://stackoverflow.com/questions/22991009/how-to-get-hounsfield-units-in-dicom-file-using-fellow-oak-dicom-library-in-c-sh
+    //Hounsfield units = (Rescale Slope * Pixel Value) + Rescale Intercept
     private double GetHU(Point point) {
-        var image = _dicomImages[CurrentFrame];
-        return 0.0f;
+        if(_dicomData is null) return 0.0f;
+
+        var frame = _dicomData[CurrentFrame];
+
+        var pixelData = DicomPixelData.Create(frame).GetFrame(0);
+
+        int index = (int)((point.Y + 1) * point.X);
+        double pixel = pixelData.Data[index];
+        var slope = frame.GetSingleValue<double>(DicomTag.RescaleSlope);
+        var intercept = frame.GetSingleValue<double>(DicomTag.RescaleIntercept);
+
+        return (pixel * slope) + intercept; 
     }
 }
 

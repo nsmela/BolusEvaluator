@@ -56,6 +56,8 @@
                         MinRangeWidth="20"
                         LowerValue="{Binding LowerWindowValue}"
                         UpperValue="{Binding UpperWindowValue}"
+                                     AutoToolTipPlacement="BottomRight"
+                                     AutoToolTipLowerValueTemplate="{Binding LowerWindowValue}"
                         />
                 </StackPanel>
 

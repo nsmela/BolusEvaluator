@@ -4,21 +4,18 @@ using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using FellowOakDicom;
 using FellowOakDicom.Imaging;
-using FellowOakDicom.Imaging.Codec;
-using FellowOakDicom.IO.Buffer;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Documents;
 
 namespace BolusEvaluator.MVVM.ViewModels;
 
-public class DicomImageMessage : ValueChangedMessage<List<DicomImage>> {
-    public DicomImageMessage(List<DicomImage> value) : base(value) { }
+public class DicomDatasetMessage : ValueChangedMessage<List<DicomDataset>> {
+    public DicomDatasetMessage(List<DicomDataset> value) : base(value) { }
 }
+
 
 [ObservableObject]
 public partial class MainViewModel {
@@ -44,11 +41,9 @@ public partial class MainViewModel {
 
             IsBusy = true;
 
-            var file = await DicomFile.OpenAsync(openFile.FileName);
-
             //generating an image
-            var image = await GetFile(openFile);
-            WeakReferenceMessenger.Default.Send(new DicomImageMessage(image));
+            var file = await DicomFile.OpenAsync(openFile.FileName);
+            WeakReferenceMessenger.Default.Send(new DicomDatasetMessage(await GetData(openFile)));
 
             //generate details text
             FileInfo = await GetAllTags(file);
@@ -73,16 +68,21 @@ public partial class MainViewModel {
         return task;
     }
 
-    private async Task<List<DicomImage>> GetFile(OpenFileDialog fileDialog) {
-        if (fileDialog.FileNames.Length == 1) return new List<DicomImage>() { new DicomImage(fileDialog.FileName) };
+    private async Task<List<DicomDataset>> GetData(OpenFileDialog fileDialog) {
+        if (fileDialog.FileNames.Length == 1) 
+            return new List<DicomDataset>() { 
+                (await DicomFile.OpenAsync(fileDialog.FileName)).Dataset 
+            };
+            
 
-        var task = await Task.Run(() => {
-            List<DicomImage> images = new();
+        var task = await Task.Run(async () => {
+            List<DicomDataset> data = new();
             for (int i = 0; i < fileDialog.FileNames.Length; i++) {
-                images.Add(new DicomImage(fileDialog.FileNames[i]));
+                var dataset = await DicomFile.OpenAsync(fileDialog.FileNames[i]);
+                data.Add((await DicomFile.OpenAsync(fileDialog.FileNames[i])).Dataset);
             }
 
-            return images;
+            return data;
         });
 
         return task;
