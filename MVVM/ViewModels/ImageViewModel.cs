@@ -34,6 +34,8 @@ public partial class ImageViewModel {
     //point on image 
     [ObservableProperty] private string? _mousePointText;
 
+    //housfield units calculation
+    private double _rescaleSlope, _rescaleIntercept;
     private List<DicomDataset>? _dicomData;
 
     private bool _isBusy = false;
@@ -73,6 +75,9 @@ public partial class ImageViewModel {
             LowerWindowValue = center - range;
             UpperWindowValue = center + range;
 
+            _rescaleSlope = _dicomData[0].GetSingleValue<double>(DicomTag.RescaleSlope);
+            _rescaleIntercept = _dicomData[0].GetSingleValue<double>(DicomTag.RescaleIntercept);
+
             UpdateDisplayImage();
 
             _isBusy = false;
@@ -106,13 +111,18 @@ public partial class ImageViewModel {
         if(_dicomData is null) return 0.0f;
 
         var frame = _dicomData[CurrentFrame];
+        
+        var header = DicomPixelData.Create(frame);
+        var pixelData = ((GrayscalePixelDataS16)PixelDataFactory.Create(header, 0)).Data;
 
-        var pixelData = DicomPixelData.Create(frame).GetFrame(0);
+        //index calculation
+        int column =  ((int)point.X);
+        int row = ((int)point.Y);
+        int indexOffset = ((column + 1) * row) + column;
 
-        int index = (int)((point.Y + 1) * point.X);
-        double pixel = pixelData.Data[index];
-        var slope = frame.GetSingleValue<double>(DicomTag.RescaleSlope);
-        var intercept = frame.GetSingleValue<double>(DicomTag.RescaleIntercept);
+        var pixel = pixelData[indexOffset];
+        var slope = _rescaleSlope;
+        var intercept = _rescaleIntercept;
 
         return (pixel * slope) + intercept; 
     }
