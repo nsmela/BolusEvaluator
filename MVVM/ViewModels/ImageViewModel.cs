@@ -43,8 +43,9 @@ public partial class ImageViewModel {
     //point on image 
     [ObservableProperty] private string? _mousePointText;
 
-    //housfield units calculation
-    private double _rescaleSlope, _rescaleIntercept;
+    //frame data
+    private double _rescaleSlope, _rescaleIntercept; //for calculating HU
+    private double _imageWidth = 512, _imageHeight = 512; //image pixel sizes
     private List<DicomDataset>? _dicomData;
 
     private bool _isBusy = false;
@@ -86,6 +87,9 @@ public partial class ImageViewModel {
             _rescaleSlope = _dicomData[0].GetSingleValue<double>(DicomTag.RescaleSlope);
             _rescaleIntercept = _dicomData[0].GetSingleValue<double>(DicomTag.RescaleIntercept);
 
+            _imageWidth = _dicomData[0].GetSingleValue<double>(DicomTag.Columns);
+            _imageHeight = _dicomData[0].GetSingleValue<double>(DicomTag.Rows);
+
             UpdateDisplayImage();
 
             _isBusy = false;
@@ -101,7 +105,7 @@ public partial class ImageViewModel {
         var image = new DicomImage(_dicomData[CurrentFrame]);
 
         var header = DicomPixelData.Create(_dicomData[CurrentFrame]);
-        var pixelMap = ((GrayscalePixelDataS16)PixelDataFactory.Create(header, 0));
+        var pixelMap = PixelDataFactory.Create(header, 0);
         var range = pixelMap.GetMinMax();
         MinWindowValue = range.Minimum;
         MaxWindowValue = range.Maximum;
@@ -124,9 +128,7 @@ public partial class ImageViewModel {
 
     public void ToggleTestImage() {
         ShowTestImage = !ShowTestImage;
-
         UpdateDisplayImage();
-
     }
 
     //https://stackoverflow.com/questions/22991009/how-to-get-hounsfield-units-in-dicom-file-using-fellow-oak-dicom-library-in-c-sh
@@ -137,36 +139,39 @@ public partial class ImageViewModel {
 
         var frame = _dicomData[CurrentFrame];
         var header = DicomPixelData.Create(frame);
-        var pixelMap = ((GrayscalePixelDataS16)PixelDataFactory.Create(header, 0));
+        var pixelMap = (PixelDataFactory.Create(header, 0));
 
-        return (double)GetHU(pixelMap, (int)point.X, (int)point.Y);
+        return GetHUValue(pixelMap, (int)point.X, (int)point.Y);
     }
 
-    private short GetHU(GrayscalePixelDataS16 pixelMap, int iX, int iY) {
+
+
+    private double GetHUValue(IPixelData pixelMap, int iX, int iY) {
         if (pixelMap is null) return -2000;
 
         int index = (int)(iX + pixelMap.Width * iY);
-        return (short)(pixelMap.Data[index] + _rescaleIntercept);
+        switch (pixelMap) {
+            case GrayscalePixelDataU16:
+                return ((GrayscalePixelDataU16)pixelMap).Data[index] * _rescaleSlope + _rescaleIntercept;
+            case GrayscalePixelDataS16:
+                return ((GrayscalePixelDataS16)pixelMap).Data[index] * _rescaleSlope + _rescaleIntercept;
+            default: 
+                return 0.0f;
+        }
     }
 
     private void UpdateTestBitmap() {
         // Define parameters used to create the BitmapSource.
-        PixelFormat pf = PixelFormats.Bgr32;
-        int width = 512;
-        int height = 512;
-        int rawStride = (width * pf.BitsPerPixel + 7) / 8;
-        byte[] rawImage = new byte[rawStride * height];
-
         // Initialize the image with data.
         var frame = _dicomData[CurrentFrame];
         var header = DicomPixelData.Create(frame);
-        var pixelMap = ((GrayscalePixelDataS16)PixelDataFactory.Create(header, 0));
+        var pixelMap = (PixelDataFactory.Create(header, 0));
 
-        short pixel;
-        var bitmap = new Bitmap(width, height);
-        for(int x = 0; x < width; x++) {
-            for(int y = 0; y < height; y++) {
-                pixel = GetHU(pixelMap, x, y);
+        double pixel;
+        var bitmap = new Bitmap(pixelMap.Width, pixelMap.Height);
+        for(int x = 0; x < pixelMap.Width; x++) {
+            for(int y = 0; y < pixelMap.Height; y++) {
+                pixel = GetHUValue(pixelMap, x, y);
                 if (pixel > LowerWindowValue && pixel < UpperWindowValue) bitmap.SetPixel(x, y, Color.Red);
                 else bitmap.SetPixel(x, y, Color.Black);
             }
@@ -180,6 +185,6 @@ public partial class ImageViewModel {
 
     }
 
-
+    
 }
 
