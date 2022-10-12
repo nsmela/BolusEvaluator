@@ -1,15 +1,20 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using ControlzEx.Standard;
 using FellowOakDicom;
 using FellowOakDicom.Imaging;
 using FellowOakDicom.Imaging.Render;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Color = System.Drawing.Color;
+using Point = System.Windows.Point;
 
 namespace BolusEvaluator.MVVM.ViewModels;
 
@@ -20,17 +25,21 @@ public partial class ImageViewModel {
     [ObservableProperty] private ImageSource? _displayImage;
 
     //window levels slider
+    [ObservableProperty] private double? _maxWindowValue = 40;
+    [ObservableProperty] private double? _minWindowValue = -40;
     [ObservableProperty] private double? _lowerWindowValue;
     [ObservableProperty] private double? _upperWindowValue;
     partial void OnUpperWindowValueChanged(double? value) => RecalculateImageWindow();
     partial void OnLowerWindowValueChanged(double? value) => RecalculateImageWindow();
 
-    //currentImage slider
+    //current frame slider
     [ObservableProperty] private int _currentFrame;
     [ObservableProperty] private int _maxFrames;
 
     partial void OnCurrentFrameChanged(int value) => RecalculateImageWindow();
 
+    //test image
+    [ObservableProperty] private bool _showTestImage = false;
     //point on image 
     [ObservableProperty] private string? _mousePointText;
 
@@ -46,7 +55,6 @@ public partial class ImageViewModel {
         if (_dicomData.Count < 1) return;
 
         UpdateDisplayImage();
-
     }
 
     public ImageViewModel() {
@@ -83,6 +91,7 @@ public partial class ImageViewModel {
             _isBusy = false;
         } catch (Exception ex) {
             MessageBox.Show("Error: " + ex.Message);
+            _isBusy = false;
         }
     }
 
@@ -91,18 +100,33 @@ public partial class ImageViewModel {
 
         var image = new DicomImage(_dicomData[CurrentFrame]);
 
+        var header = DicomPixelData.Create(_dicomData[CurrentFrame]);
+        var pixelMap = ((GrayscalePixelDataS16)PixelDataFactory.Create(header, 0));
+        var range = pixelMap.GetMinMax();
+        MinWindowValue = range.Minimum;
+        MaxWindowValue = range.Maximum;
+
         var window = (UpperWindowValue - LowerWindowValue);
         var center = (LowerWindowValue + (window / 2));
 
         image.WindowWidth = window is null ? 100.0f : (double)window;
         image.WindowCenter = center is null ? 0.0f : (double)center;
 
-        DisplayImage = image.RenderImage().AsWriteableBitmap();
+        if (ShowTestImage) UpdateTestBitmap();
+        else DisplayImage = image.RenderImage().AsWriteableBitmap();
     }
 
     public void UpdateMousePoint(Point mousePoint) {
         MousePointText = $"X: {mousePoint.X}\r\nY: {mousePoint.Y}\r\nHU: {GetHU(mousePoint)}";
         var huValue = GetHU(mousePoint);
+        ToggleTestImage();
+    }
+
+    public void ToggleTestImage() {
+        ShowTestImage = !ShowTestImage;
+
+        UpdateDisplayImage();
+
     }
 
     //https://stackoverflow.com/questions/22991009/how-to-get-hounsfield-units-in-dicom-file-using-fellow-oak-dicom-library-in-c-sh
@@ -112,20 +136,50 @@ public partial class ImageViewModel {
         if(_dicomData is null) return 0.0f;
 
         var frame = _dicomData[CurrentFrame];
-        
         var header = DicomPixelData.Create(frame);
-        var pixelData = ((GrayscalePixelDataS16)PixelDataFactory.Create(header, 0)).Data;
+        var pixelMap = ((GrayscalePixelDataS16)PixelDataFactory.Create(header, 0));
 
-        //index calculation
-        int column =  ((int)point.X);
-        int row = ((int)point.Y);
-        int indexOffset = ((column + 1) * row) + column;
-
-        var pixel = pixelData[indexOffset];
-        var slope = _rescaleSlope;
-        var intercept = _rescaleIntercept;
-
-        return (pixel * slope) + intercept; 
+        return (double)GetHU(pixelMap, (int)point.X, (int)point.Y);
     }
+
+    private short GetHU(GrayscalePixelDataS16 pixelMap, int iX, int iY) {
+        if (pixelMap is null) return -2000;
+
+        int index = (int)(iX + pixelMap.Width * iY);
+        return (short)(pixelMap.Data[index] + _rescaleIntercept);
+    }
+
+    private void UpdateTestBitmap() {
+        // Define parameters used to create the BitmapSource.
+        PixelFormat pf = PixelFormats.Bgr32;
+        int width = 512;
+        int height = 512;
+        int rawStride = (width * pf.BitsPerPixel + 7) / 8;
+        byte[] rawImage = new byte[rawStride * height];
+
+        // Initialize the image with data.
+        var frame = _dicomData[CurrentFrame];
+        var header = DicomPixelData.Create(frame);
+        var pixelMap = ((GrayscalePixelDataS16)PixelDataFactory.Create(header, 0));
+
+        short pixel;
+        var bitmap = new Bitmap(width, height);
+        for(int x = 0; x < width; x++) {
+            for(int y = 0; y < height; y++) {
+                pixel = GetHU(pixelMap, x, y);
+                if (pixel > LowerWindowValue && pixel < UpperWindowValue) bitmap.SetPixel(x, y, Color.Red);
+                else bitmap.SetPixel(x, y, Color.Black);
+            }
+        }
+
+        DisplayImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                  bitmap.GetHbitmap(),
+                  IntPtr.Zero,
+                  Int32Rect.Empty,
+                  BitmapSizeOptions.FromEmptyOptions());
+
+    }
+
+
 }
 

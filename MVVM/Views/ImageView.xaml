@@ -6,10 +6,13 @@
              xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
              xmlns:local="clr-namespace:BolusEvaluator.MVVM.Views"
              xmlns:controls="clr-namespace:BolusEvaluator.Controls"
-             xmlns:viewmodels="clr-namespace:BolusEvaluator.MVVM.ViewModels"
+             xmlns:viewmodels="clr-namespace:BolusEvaluator.MVVM.ViewModels" xmlns:local1="http://schemas.microsoft.com/netfx/2009/xaml/presentation"
              d:DataContext="{d:DesignInstance Type=viewmodels:ImageViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="600">
+    <UserControl.Resources>
+        <local1:BooleanToVisibilityConverter x:Key="b2vconv"/>
+    </UserControl.Resources>
     <Grid Background="DimGray" Margin="4" >
         <Border BorderBrush="Black" BorderThickness="3" CornerRadius="8">
             <Grid >
@@ -24,40 +27,40 @@
 
                 <Border x:Name="ParentBorder" BorderBrush="Black" BorderThickness="3"  Background="White" Margin="6" ClipToBounds="True">
                     
-                    <StackPanel Grid.Column="0"  Grid.Row="0"
+                    <Canvas Grid.Column="0"  Grid.Row="0"
                     Height="512" Width="512"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
 
                         <controls:ZoomBorder>
                             <Image Stretch="None">
-                            <Image.Source>
-                                <DrawingImage >
-                                    <DrawingImage.Drawing>
-                                        <DrawingGroup>
+                                <Image.Source>
+                                    <DrawingImage >
+                                        <DrawingImage.Drawing>
+                                            <DrawingGroup>
 
-                                            <ImageDrawing Rect="0,0,512,512" ImageSource="{Binding DisplayImage}"/>
+                                                <ImageDrawing Rect="0,0,512,512" ImageSource="{Binding DisplayImage}"/>
 
-                                        </DrawingGroup>
-                                    </DrawingImage.Drawing>
-                                </DrawingImage>
-                            </Image.Source>
-                        </Image>
+                                            </DrawingGroup>
+                                        </DrawingImage.Drawing>
+                                    </DrawingImage>
+                                </Image.Source>
+                            </Image>
                         </controls:ZoomBorder>
-                    </StackPanel>
+                    </Canvas>
                 </Border>
 
                 <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Vertical" >
                     <mah:RangeSlider Width="60" Height="500" Margin="10"
                         Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
                         ExtendedMode="True"
-                        Minimum="-2000"
-                        Maximum="2000"                       
+                        Minimum="{Binding MinWindowValue}"
+                        Maximum="{Binding MaxWindowValue}"                       
                         MinRangeWidth="20"
                         LowerValue="{Binding LowerWindowValue}"
                         UpperValue="{Binding UpperWindowValue}"
-                                     AutoToolTipPlacement="BottomRight"
-                                     AutoToolTipLowerValueTemplate="{Binding LowerWindowValue}"
+                        AutoToolTipPlacement="BottomRight"
+                        AutoToolTipLowerValueTemplate="{Binding LowerWindowValue}" 
                         />
                 </StackPanel>
 
@@ -68,6 +71,8 @@
                 <StackPanel Grid.Column="1" Grid.Row="1">
                     <TextBlock Text="{Binding MousePointText}" />
                 </StackPanel>
+
+
             </Grid>
         </Border>
     </Grid>

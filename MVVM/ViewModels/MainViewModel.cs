@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using FellowOakDicom;
 using FellowOakDicom.Imaging;
+using FellowOakDicom.Imaging.Render;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
