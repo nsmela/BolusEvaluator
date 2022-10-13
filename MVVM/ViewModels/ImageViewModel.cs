@@ -37,7 +37,7 @@ public partial class ImageViewModel {
     [ObservableProperty] private int _currentFrame;
     [ObservableProperty] private int _maxFrames;
 
-    partial void OnCurrentFrameChanged(int value) => RecalculateImageWindow();
+    partial void OnCurrentFrameChanged(int value) => UpdateImageFrame();
 
     //test image
     [ObservableProperty] private bool _showTestImage = false;
@@ -45,9 +45,10 @@ public partial class ImageViewModel {
     [ObservableProperty] private string? _mousePointText;
 
     //frame data
-    private double _rescaleSlope, _rescaleIntercept; //for calculating HU
-    private int _imageWidth = 512, _imageHeight = 512; //image pixel sizes
     private List<DicomDataset>? _dicomData;
+    private double _rescaleSlope, _rescaleIntercept; //for calculating HU
+    private int _pixelPadding;
+    private int _imageWidth = 512, _imageHeight = 512; //image pixel sizes
     private List<Bitmap>? _bitmapData;
 
     private bool _isBusy = false;
@@ -93,23 +94,24 @@ public partial class ImageViewModel {
             _rescaleSlope = _dicomData[0].GetSingleValue<double>(DicomTag.RescaleSlope);
             _rescaleIntercept = _dicomData[0].GetSingleValue<double>(DicomTag.RescaleIntercept);
 
-            _imageWidth = (int)_dicomData[0].GetSingleValue<double>(DicomTag.Columns);
-            _imageHeight = (int)_dicomData[0].GetSingleValue<double>(DicomTag.Rows);
+            _imageWidth = _dicomData[0].GetSingleValue<int>(DicomTag.Columns);
+            _imageHeight = _dicomData[0].GetSingleValue<int>(DicomTag.Rows);
+
+            _pixelPadding = _dicomData[CurrentFrame].GetSingleValue<int>(DicomTag.PixelPaddingValue);
 
             //creating blank bitmaps for futhur use
             _bitmapData = new();
             for (int i = 0; i < datasets.Count; i++) 
                 _bitmapData.Add(new Bitmap(_imageWidth, _imageHeight));
 
-            UpdateDisplayImage();
+            UpdateImageFrame();
         } catch (Exception ex) {
             MessageBox.Show("Error: " + ex.Message);
         }
 
         IsBusy(false);
     }
-
-    private void UpdateDisplayImage() {
+    private void UpdateImageFrame() {
         if (_dicomData is null) return;
 
         var image = new DicomImage(_dicomData[CurrentFrame]);
@@ -117,11 +119,20 @@ public partial class ImageViewModel {
         var header = DicomPixelData.Create(_dicomData[CurrentFrame]);
         var pixelMap = PixelDataFactory.Create(header, 0);
         var range = pixelMap.GetMinMax();
+
         MinWindowValue = range.Minimum;
         MaxWindowValue = range.Maximum;
 
+        UpdateDisplayImage();
+    }
+
+    private void UpdateDisplayImage() {
+        if (_dicomData is null) return;
+
         var window = (UpperWindowValue - LowerWindowValue);
         var center = (LowerWindowValue + (window / 2));
+
+        var image = new DicomImage(_dicomData[CurrentFrame]);
 
         image.WindowWidth = window is null ? 100.0f : (double)window;
         image.WindowCenter = center is null ? 0.0f : (double)center;
