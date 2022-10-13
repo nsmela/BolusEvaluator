@@ -13,7 +13,7 @@ namespace BolusEvaluator;
         AppHost = Host.CreateDefaultBuilder()
             .ConfigureServices((hostContext, services) => {
                 services.AddSingleton<MainView>();
-                services.AddTransient<ImageView>();
+                services.AddSingleton<ImageView>();
             })
             .Build();
 

@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using BolusEvaluator.Messages;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using ControlzEx.Standard;
@@ -13,6 +14,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Color = System.Drawing.Color;
 using Point = System.Windows.Point;
 
@@ -21,7 +23,10 @@ namespace BolusEvaluator.MVVM.ViewModels;
 [ObservableObject]
 [ObservableRecipient]
 public partial class ImageViewModel {
+    //events
+    public event Action<ImageViewModel> OnDisplayUpdated;
 
+    //images
     [ObservableProperty] private ImageSource? _displayImage;
     [ObservableProperty] private ImageSource? _layerImage;
 
@@ -30,8 +35,8 @@ public partial class ImageViewModel {
     [ObservableProperty] private double? _minWindowValue = -40;
     [ObservableProperty] private double? _lowerWindowValue;
     [ObservableProperty] private double? _upperWindowValue;
-    partial void OnUpperWindowValueChanged(double? value) => RecalculateImageWindow();
-    partial void OnLowerWindowValueChanged(double? value) => RecalculateImageWindow();
+    partial void OnUpperWindowValueChanged(double? value) => UpdateDisplayImage();
+    partial void OnLowerWindowValueChanged(double? value) => UpdateDisplayImage();
 
     //current frame slider
     [ObservableProperty] private int _currentFrame;
@@ -47,9 +52,11 @@ public partial class ImageViewModel {
     //frame data
     private List<DicomDataset>? _dicomData;
     private double _rescaleSlope, _rescaleIntercept; //for calculating HU
-    private int _pixelPadding;
     private int _imageWidth = 512, _imageHeight = 512; //image pixel sizes
     private List<Bitmap>? _bitmapData;
+
+    //image tools
+    private List<IImageTool> _tools;
 
     private bool _isBusy = false;
     private void IsBusy(bool value) {
@@ -57,19 +64,24 @@ public partial class ImageViewModel {
         WeakReferenceMessenger.Default.Send(new IsBusyMessage(value));
     }
 
-    private void RecalculateImageWindow() {
-        if (_isBusy) return;
-        if(_dicomData is null) return;
-        if (_dicomData.Count < 1) return;
-
-        UpdateDisplayImage();
-    }
-
     public ImageViewModel() {
+        _tools = new();
+
         WeakReferenceMessenger.Default.Register<DicomDatasetMessage>(this, (r, m) => {
             LoadDataset(m.Value);
         });
+
+        WeakReferenceMessenger.Default.Register<ShowOverlayMessage>(this, (r, m) => {
+            ToggleTestImage();
+        });
+
+        WeakReferenceMessenger.Default.Register<AddImageTool>(this, (r, m) => {
+            if (_tools.Contains(m.Value)) return;
+
+            _tools.Add(m.Value);
+        });
     }
+
 
     private void LoadDataset(List<DicomDataset> datasets) {
         if (datasets == null || datasets.Count < 1) {
@@ -97,20 +109,20 @@ public partial class ImageViewModel {
             _imageWidth = _dicomData[0].GetSingleValue<int>(DicomTag.Columns);
             _imageHeight = _dicomData[0].GetSingleValue<int>(DicomTag.Rows);
 
-            _pixelPadding = _dicomData[CurrentFrame].GetSingleValue<int>(DicomTag.PixelPaddingValue);
-
             //creating blank bitmaps for futhur use
             _bitmapData = new();
             for (int i = 0; i < datasets.Count; i++) 
                 _bitmapData.Add(new Bitmap(_imageWidth, _imageHeight));
 
-            UpdateImageFrame();
         } catch (Exception ex) {
             MessageBox.Show("Error: " + ex.Message);
         }
 
         IsBusy(false);
+        UpdateImageFrame();
     }
+
+    //new image frame
     private void UpdateImageFrame() {
         if (_dicomData is null) return;
 
@@ -126,8 +138,11 @@ public partial class ImageViewModel {
         UpdateDisplayImage();
     }
 
+    //changed the Display so new image needed
     private void UpdateDisplayImage() {
+        if (_isBusy) return;
         if (_dicomData is null) return;
+        if (_dicomData.Count < 1) return;
 
         var window = (UpperWindowValue - LowerWindowValue);
         var center = (LowerWindowValue + (window / 2));
@@ -138,6 +153,7 @@ public partial class ImageViewModel {
         image.WindowCenter = center is null ? 0.0f : (double)center;
 
         DisplayImage = image.RenderImage().AsWriteableBitmap();
+        UpdateImageTools();
     }
 
     public void UpdateMousePoint(Point mousePoint) {
@@ -165,8 +181,6 @@ public partial class ImageViewModel {
         return GetHUValue(pixelMap, (int)point.X, (int)point.Y);
     }
 
-
-
     private double GetHUValue(IPixelData pixelMap, int iX, int iY) {
         if (pixelMap is null) return -2000;
 
@@ -182,6 +196,8 @@ public partial class ImageViewModel {
     }
 
     private void UpdateTestBitmap() {
+        if (_dicomData is null) return;
+
         // Define parameters used to create the BitmapSource.
         // Initialize the image with data.
         var frame = _dicomData[CurrentFrame];
@@ -206,6 +222,12 @@ public partial class ImageViewModel {
 
     }
 
+    private void UpdateImageTools() {
+        foreach(var tool in _tools) {
+            tool.Execute(this);
+        }
+    }
     
 }
+
 
