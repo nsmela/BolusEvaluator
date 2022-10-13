@@ -14,36 +14,40 @@
         WindowStartupLocation="CenterScreen"
         mc:Ignorable="d"
         Title="Bolus Evaluation" 
-        Height="640" Width="900"
-        MinHeight="640" MinWidth="900">
+        Height="680" Width="900"
+        MinHeight="680" MinWidth="900">
     <mah:MetroWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </mah:MetroWindow.Resources>
     <Grid Background="DimGray">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
             <ColumnDefinition Width="auto" />
+            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
             <RowDefinition Height="auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        
-        <StackPanel Grid.Column="0" >
-            <Button Content="Load File" Height="40" Command="{Binding GetDicomFileCommand}" Margin="4"/>
-            <mah:ProgressRing Foreground="{DynamicResource AccentColorBrush}"
+
+        <!-- Tool bar -->
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="2" Height="40" VerticalAlignment="Top" HorizontalAlignment="Stretch">
+            <views:ToolbarView />
+        </StackPanel>
+
+        <!-- Load file and dicom dump -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Column="1" Grid.Row="1" Grid.RowSpan="2">
+            <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left">
+                <mah:ProgressRing Foreground="{DynamicResource AccentColorBrush}"
                   Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}, FallbackValue=Hidden}"            
                   Margin="10" 
                   Width="120" Height="120"/>
-        </StackPanel>
-        
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Column="0" Grid.Row="1">
-            <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left">
                 <TextBlock Text="{Binding FileInfo}"/>
             </StackPanel>
         </ScrollViewer>
-        
-        <views:ImageView Grid.Column="1" Grid.RowSpan="2" MinWidth="600" MinHeight="600"/>
+
+        <!-- Image View -->
+        <views:ImageView Grid.Column="0" Grid.Row="1" Grid.RowSpan="2" MinWidth="600" MinHeight="600"/>
     </Grid>
 </mah:MetroWindow>

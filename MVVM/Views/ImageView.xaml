@@ -40,7 +40,7 @@
                                             <DrawingGroup>
 
                                                 <ImageDrawing Rect="0,0,512,512" ImageSource="{Binding DisplayImage}"/>
-
+                                                <ImageDrawing Rect="0,0,512,512" ImageSource="{Binding LayerImage}" />
                                             </DrawingGroup>
                                         </DrawingImage.Drawing>
                                     </DrawingImage>
