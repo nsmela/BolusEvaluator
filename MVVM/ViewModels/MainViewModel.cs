@@ -23,6 +23,10 @@ public class IsBusyMessage : ValueChangedMessage<bool> {
     public IsBusyMessage(bool value) : base(value) { }
 }
 
+public class ImageDisplayActionMessage : ValueChangedMessage<Action<ImageViewModel>> {
+    public ImageDisplayActionMessage(Action<ImageViewModel> value) : base(value) { }
+}
+
 [ObservableObject]
 [ObservableRecipient]
 public partial class MainViewModel {

@@ -10,7 +10,7 @@ using System.Threading;
 using System;
 using System.Collections.Generic;
 using System.Windows;
-using static System.Net.WebRequestMethods;
+using BolusEvaluator.Messages;
 
 namespace BolusEvaluator.MVVM.ViewModels;
 
@@ -19,7 +19,13 @@ public partial class ToolbarViewModel {
     [ObservableProperty] private string? _currentTool = string.Empty; //placeholder for more advanced tools    
 
     private void IsBusy (bool value) => WeakReferenceMessenger.Default.Send(new IsBusyMessage(value));
-    
+
+    [RelayCommand]
+    private async Task ShowOverlay() {
+         WeakReferenceMessenger.Default.Send(new ShowOverlayMessage(true));
+        WeakReferenceMessenger.Default.Send(new AddImageTool(new IImageTool()));
+
+    }
 
     [RelayCommand]
     private async Task LoadDicomFile(CancellationToken token) {
