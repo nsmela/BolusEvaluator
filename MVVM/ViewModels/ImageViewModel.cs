@@ -23,6 +23,7 @@ namespace BolusEvaluator.MVVM.ViewModels;
 public partial class ImageViewModel {
 
     [ObservableProperty] private ImageSource? _displayImage;
+    [ObservableProperty] private ImageSource? _layerImage;
 
     //window levels slider
     [ObservableProperty] private double? _maxWindowValue = 40;
@@ -45,10 +46,15 @@ public partial class ImageViewModel {
 
     //frame data
     private double _rescaleSlope, _rescaleIntercept; //for calculating HU
-    private double _imageWidth = 512, _imageHeight = 512; //image pixel sizes
+    private int _imageWidth = 512, _imageHeight = 512; //image pixel sizes
     private List<DicomDataset>? _dicomData;
+    private List<Bitmap>? _bitmapData;
 
     private bool _isBusy = false;
+    private void IsBusy(bool value) {
+        _isBusy = value;
+        WeakReferenceMessenger.Default.Send(new IsBusyMessage(value));
+    }
 
     private void RecalculateImageWindow() {
         if (_isBusy) return;
@@ -74,7 +80,7 @@ public partial class ImageViewModel {
         _dicomData = datasets;
 
         try {
-            _isBusy = true;
+            IsBusy(true);//starts loading bar
             CurrentFrame = 0;
             MaxFrames = datasets.Count - 1;
 
@@ -87,16 +93,20 @@ public partial class ImageViewModel {
             _rescaleSlope = _dicomData[0].GetSingleValue<double>(DicomTag.RescaleSlope);
             _rescaleIntercept = _dicomData[0].GetSingleValue<double>(DicomTag.RescaleIntercept);
 
-            _imageWidth = _dicomData[0].GetSingleValue<double>(DicomTag.Columns);
-            _imageHeight = _dicomData[0].GetSingleValue<double>(DicomTag.Rows);
+            _imageWidth = (int)_dicomData[0].GetSingleValue<double>(DicomTag.Columns);
+            _imageHeight = (int)_dicomData[0].GetSingleValue<double>(DicomTag.Rows);
+
+            //creating blank bitmaps for futhur use
+            _bitmapData = new();
+            for (int i = 0; i < datasets.Count; i++) 
+                _bitmapData.Add(new Bitmap(_imageWidth, _imageHeight));
 
             UpdateDisplayImage();
-
-            _isBusy = false;
         } catch (Exception ex) {
             MessageBox.Show("Error: " + ex.Message);
-            _isBusy = false;
         }
+
+        IsBusy(false);
     }
 
     private void UpdateDisplayImage() {
@@ -116,8 +126,7 @@ public partial class ImageViewModel {
         image.WindowWidth = window is null ? 100.0f : (double)window;
         image.WindowCenter = center is null ? 0.0f : (double)center;
 
-        if (ShowTestImage) UpdateTestBitmap();
-        else DisplayImage = image.RenderImage().AsWriteableBitmap();
+        DisplayImage = image.RenderImage().AsWriteableBitmap();
     }
 
     public void UpdateMousePoint(Point mousePoint) {
@@ -128,7 +137,8 @@ public partial class ImageViewModel {
 
     public void ToggleTestImage() {
         ShowTestImage = !ShowTestImage;
-        UpdateDisplayImage();
+        if (ShowTestImage) UpdateTestBitmap();
+        else LayerImage = null;
     }
 
     //https://stackoverflow.com/questions/22991009/how-to-get-hounsfield-units-in-dicom-file-using-fellow-oak-dicom-library-in-c-sh
@@ -177,7 +187,7 @@ public partial class ImageViewModel {
             }
         }
 
-        DisplayImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+        LayerImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
                   bitmap.GetHbitmap(),
                   IntPtr.Zero,
                   Int32Rect.Empty,
