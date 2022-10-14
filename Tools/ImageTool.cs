@@ -34,7 +34,7 @@ namespace BolusEvaluator.ImageTools;
                   Int32Rect.Empty,
                   BitmapSizeOptions.FromEmptyOptions());
     }
-}
+    }
 
 
 public interface IImageTool {
