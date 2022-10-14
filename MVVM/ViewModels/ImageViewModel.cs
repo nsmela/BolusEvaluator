@@ -62,9 +62,11 @@ public partial class ImageViewModel {
     public ImageViewModel() {
         _tools = new();
 
-        if (_dicomData.Count < 1) return;
-
         UpdateDisplayImage();
+
+        WeakReferenceMessenger.Default.Register<DicomDatasetMessage>(this, (r, m) => {
+            LoadDataset(m.Value);
+        });
 
         WeakReferenceMessenger.Default.Register<AddImageTool>(this, (r, m) => {
             if (_tools.Contains(m.Value)) return;
@@ -76,18 +78,6 @@ public partial class ImageViewModel {
     }
 
     public DicomDataset GetCurrentFrameData() => _dicomData[CurrentFrame];
-
-    public ImageViewModel() {
-        if (_dicomData.Count < 1) return;
-
-        UpdateDisplayImage();
-    }
-
-    public ImageViewModel() {
-        WeakReferenceMessenger.Default.Register<DicomDatasetMessage>(this, (r, m) => {
-            LoadDataset(m.Value);
-        });
-    }
 
     private void LoadDataset(List<DicomDataset> datasets) {
         if (datasets == null || datasets.Count < 1) {
@@ -117,7 +107,7 @@ public partial class ImageViewModel {
 
             //creating blank bitmaps for futhur use
             _bitmapData = new();
-            for (int i = 0; i < datasets.Count; i++) 
+            for (int i = 0; i < datasets.Count; i++)
                 _bitmapData.Add(new Bitmap(_imageWidth, _imageHeight));
 
         } catch (Exception ex) {
@@ -168,43 +158,35 @@ public partial class ImageViewModel {
     }
 
     //https://stackoverflow.com/questions/22991009/how-to-get-hounsfield-units-in-dicom-file-using-fellow-oak-dicom-library-in-c-sh
-    public double GetHUValue(IPixelData pixelMap, int iX, int iY) {
+    //https://www.sciencedirect.com/topics/medicine-and-dentistry/hounsfield-scale
     //Hounsfield units = (Rescale Slope * Pixel Value) + Rescale Intercept
     private double GetHU(Point point) {
-        if(_dicomData is null) return 0.0f;
-
+        if (_dicomData is null) return 0.0f;
         var frame = _dicomData[CurrentFrame];
-
-
-    private double GetHUValue(IPixelData pixelMap, int iX, int iY) {
+        var header = DicomPixelData.Create(frame);
         var pixelMap = (PixelDataFactory.Create(header, 0));
-
         return GetHUValue(pixelMap, (int)point.X, (int)point.Y);
     }
 
+    public double GetHUValue(IPixelData pixelMap, int iX, int iY) {
+        if (pixelMap is null) return -2000;
+
+        int index = (int)(iX + pixelMap.Width * iY);
+        switch (pixelMap) {
+            case GrayscalePixelDataU16:
+                return ((GrayscalePixelDataU16)pixelMap).Data[index] * _rescaleSlope + _rescaleIntercept;
+            case GrayscalePixelDataS16:
+                return ((GrayscalePixelDataS16)pixelMap).Data[index] * _rescaleSlope + _rescaleIntercept;
+            default:
+                return 0.0f;
+        }
+    }
+
     private void UpdateImageTools() {
-        foreach(var tool in _tools) {
+        foreach (var tool in _tools) {
             tool.Execute(this);
         }
     }
-    
-}
-
-                  IntPtr.Zero,
-                  Int32Rect.Empty,
-                  BitmapSizeOptions.FromEmptyOptions());
-
-    }
-
-    
-}
-                  IntPtr.Zero,
-                  Int32Rect.Empty,
-                  BitmapSizeOptions.FromEmptyOptions());
-
-    }
-
-    
 }
 
 
