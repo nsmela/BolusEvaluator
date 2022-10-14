@@ -13,6 +13,6 @@
         <Button Style="{DynamicResource MahApps.Styles.Button.Square}" Height="32" Margin="1 2 1 2"
                 Content="load file" Command="{Binding LoadDicomFileCommand}"/>
         <Button Style="{DynamicResource MahApps.Styles.Button.Square}" Height="32" Margin="1 2 1 2"
-                Content="show window" Command="{Binding ShowOverlayCommand}" />
+                Content="show window" Command="{Binding ShowHighlightCommand}" />
     </StackPanel>
 </UserControl>

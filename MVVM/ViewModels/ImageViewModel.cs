@@ -21,7 +21,6 @@ namespace BolusEvaluator.MVVM.ViewModels;
 [ObservableRecipient]
 public partial class ImageViewModel {
     //images
-    //images
     [ObservableProperty] private ImageSource? _displayImage;
     [ObservableProperty] private ImageSource? _layerImage;
 
@@ -51,7 +50,7 @@ public partial class ImageViewModel {
     private List<Bitmap>? _bitmapData;
 
     //image tools
-    private List<IImageTool> _tools;
+    private Dictionary<string, IImageTool> _tools;
 
     private bool _isBusy = false;
     private void IsBusy(bool value) {
@@ -69,9 +68,17 @@ public partial class ImageViewModel {
         });
 
         WeakReferenceMessenger.Default.Register<AddImageTool>(this, (r, m) => {
-            if (_tools.Contains(m.Value)) return;
+        if (_tools.ContainsKey(m.Value.Label)) return; 
 
-            _tools.Add(m.Value);
+            _tools.Add(m.Value.Label, m.Value);
+
+            UpdateDisplayImage();
+        });
+
+        WeakReferenceMessenger.Default.Register<DeleteImageTool>(this, (r, m) => {
+            if (!_tools.ContainsKey(m.Value.Label)) return;
+
+            _tools.Remove(m.Value.Label);
 
             UpdateDisplayImage();
         });
@@ -183,8 +190,14 @@ public partial class ImageViewModel {
     }
 
     private void UpdateImageTools() {
+        LayerImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                  new Bitmap(_imageWidth, _imageHeight).GetHbitmap(),
+                  IntPtr.Zero,
+                  Int32Rect.Empty,
+                  BitmapSizeOptions.FromEmptyOptions());
+
         foreach (var tool in _tools) {
-            tool.Execute(this);
+            tool.Value.Execute(this);
         }
     }
 }

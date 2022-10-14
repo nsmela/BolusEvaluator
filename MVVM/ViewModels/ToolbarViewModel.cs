@@ -20,11 +20,13 @@ public partial class ToolbarViewModel {
     [ObservableProperty] private string? _currentTool = string.Empty; //placeholder for more advanced tools    
 
     private void IsBusy (bool value) => WeakReferenceMessenger.Default.Send(new IsBusyMessage(value));
-
+    private bool _isHighlightImageActive = false;
     [RelayCommand]
-    private async Task ShowOverlay() {
-         //WeakReferenceMessenger.Default.Send(new ShowOverlayMessage(true));
-        WeakReferenceMessenger.Default.Send(new AddImageTool(new HighlightImageWindow()));
+    private async Task ShowHighlight() {
+        _isHighlightImageActive = !_isHighlightImageActive;
+
+        if(_isHighlightImageActive) WeakReferenceMessenger.Default.Send(new AddImageTool(new HighlightImageWindow()));
+        else WeakReferenceMessenger.Default.Send(new DeleteImageTool(new HighlightImageWindow()));
 
     }
 

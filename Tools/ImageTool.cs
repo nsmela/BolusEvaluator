@@ -10,6 +10,8 @@ using FellowOakDicom;
 namespace BolusEvaluator.ImageTools;
     public class HighlightImageWindow : IImageTool {
 
+    public string Label => "HighlightImageWindow";
+
     public void Execute(ImageViewModel viewModel) {
         var dicomData = viewModel.GetCurrentFrameData();
         if (dicomData is null) return;
@@ -38,6 +40,7 @@ namespace BolusEvaluator.ImageTools;
 
 
 public interface IImageTool {
+    public string Label { get; }
     public void Execute(ImageViewModel viewModel);
 
 }
