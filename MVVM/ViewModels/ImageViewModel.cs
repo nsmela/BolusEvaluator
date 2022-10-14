@@ -8,6 +8,7 @@ using FellowOakDicom.Imaging.Render;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -61,7 +62,7 @@ public partial class ImageViewModel {
 
     //events
     public event Action<Point> OnMouseLeftButtonDown, OnMouseLeftButtonUp, OnMouseRightButtonDown, OnMouseHasMoved;
-    public event Action OnImageUpdated;
+    public event Action OnImageUpdated, OnNewFrame;
 
     public ImageViewModel() {
         _tools = new();
@@ -107,9 +108,15 @@ public partial class ImageViewModel {
         }
 
         _dicomData = datasets;
+        _bitmapData = new();
+        var bitmap = BitmapFactory.New(ImageWidth, ImageHeight);
+        for (int i = 0; i < datasets.Count; i++) {
+            _bitmapData.Add(bitmap);
+        }
 
         try {
             IsBusy(true);//starts loading bar
+
             CurrentFrame = 0;
             MaxFrames = datasets.Count - 1;
 
@@ -126,8 +133,6 @@ public partial class ImageViewModel {
             _imageHeight = _dicomData[0].GetSingleValue<int>(DicomTag.Rows);
 
             //creating blank bitmaps for futher use
-            _bitmapData = new();
-            ClearAllImages();
 
         } catch (Exception ex) {
             MessageBox.Show("Error: " + ex.Message);
@@ -150,7 +155,11 @@ public partial class ImageViewModel {
         MinWindowValue = range.Minimum;
         MaxWindowValue = range.Maximum;
 
+        LayerImage = _bitmapData[CurrentFrame];
+        
+
         UpdateDisplayImage();
+        OnNewFrame?.Invoke();
     }
 
     //changed the Display so new image needed
@@ -172,33 +181,38 @@ public partial class ImageViewModel {
     }
 
     private void UpdateImageTools() {
-        /*LayerImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                  new Bitmap(_imageWidth, _imageHeight).GetHbitmap(),
-                  IntPtr.Zero,
-                  Int32Rect.Empty,
-                  BitmapSizeOptions.FromEmptyOptions());*/
-
         foreach (var tool in _tools) {
             tool.Value.Execute(this);
         }
+
+        OnImageUpdated?.Invoke();
     }
 
     //layer images
     public void SetImage(BitmapSource bitmap) {
-        LayerImage = bitmap;
         _bitmapData[CurrentFrame] = bitmap;
+        LayerImage = bitmap;
+        UpdateImageTools();
     }
 
-    public void ClearCurrentImage() => ClearImage(CurrentFrame);
+    public WriteableBitmap GetCurrentLayerImage() => (WriteableBitmap)_bitmapData[CurrentFrame];
+
+    public void ClearCurrentImage() {
+        ClearImage(CurrentFrame);
+        UpdateDisplayImage();
+    }
     public void ClearAllImages() {
         for (int i = 0; i < _bitmapData.Count; i++)
             ClearImage(i);
+
+        UpdateDisplayImage();
     }
 
     private void ClearImage(int index) {
         var bitmap = BitmapFactory.New(ImageWidth, ImageHeight);
         LayerImage = bitmap;
         _bitmapData[index] = bitmap;
+
     }
 
     //mouse events
@@ -294,6 +308,7 @@ public class DrawTool : IImageViewState {
 
     public void OnExit() {
         _viewModel.OnMouseLeftButtonDown -= AddPixel;
+        _viewModel.OnNewFrame -= NewFrame;
 
         _viewModel.ClearAllImages();
     }
@@ -308,16 +323,24 @@ public class DrawTool : IImageViewState {
         _viewModel.LayerImage = _bitmap;
     }
 
-    public void OnStart(ImageViewModel viewModel) {
-        _viewModel = viewModel;
-        _viewModel.OnMouseLeftButtonDown += AddPixel;
-
-        _drawColor = Colors.Violet;
-
+    private void NewFrame() {
         var width = _viewModel.ImageWidth;
         var height = _viewModel.ImageHeight;
         _bitmap = BitmapFactory.New(width, height);
         _bitmap.DrawLine(width / 2, 0, width / 2, height, _drawColor);
-        _viewModel.LayerImage = _bitmap;
+        _bitmap.DrawLine(0, height / 2, width, height / 2, _drawColor);
+        _viewModel.SetImage(_bitmap);
     }
+
+    public void OnStart(ImageViewModel viewModel) {
+        _viewModel = viewModel;
+        _viewModel.OnMouseLeftButtonDown += AddPixel;
+        _viewModel.OnNewFrame += NewFrame;
+
+        _drawColor = Colors.Violet;
+
+        NewFrame();
+    }
+
+
 }
