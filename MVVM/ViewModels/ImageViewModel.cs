@@ -7,13 +7,9 @@ using FellowOakDicom.Imaging;
 using FellowOakDicom.Imaging.Render;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
-using Color = System.Drawing.Color;
 using Point = System.Windows.Point;
 
 namespace BolusEvaluator.MVVM.ViewModels;
