@@ -26,7 +26,6 @@ public class HighlightImageWindow : IImageTool {
             for (int y = 0; y < pixelMap.Height; y++) {
                 pixel = viewModel.GetHUValue(pixelMap, x, y);
                 if (pixel > viewModel.LowerWindowValue && pixel < viewModel.UpperWindowValue) bitmap.SetPixel(x, y, Color.Red);
-                else bitmap.SetPixel(x, y, Color.Black);
             }
         }
 

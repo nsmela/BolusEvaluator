@@ -46,9 +46,9 @@ public partial class ImageViewModel {
 
     //frame data
     private List<DicomDataset>? _dicomData;
+    private List<BitmapSource>? _bitmapData;
     private double _rescaleSlope, _rescaleIntercept; //for calculating HU
     [ObservableProperty] private int _imageWidth = 512, _imageHeight = 512; //image pixel sizes
-    private List<Bitmap>? _bitmapData;
 
     //image tools
     private Dictionary<string, IImageTool> _tools;
@@ -58,6 +58,10 @@ public partial class ImageViewModel {
         _isBusy = value;
         WeakReferenceMessenger.Default.Send(new IsBusyMessage(value));
     }
+
+    //events
+    public event Action<Point> OnMouseLeftButtonDown, OnMouseLeftButtonUp, OnMouseRightButtonDown, OnMouseHasMoved;
+    public event Action OnImageUpdated;
 
     public ImageViewModel() {
         _tools = new();
@@ -123,8 +127,7 @@ public partial class ImageViewModel {
 
             //creating blank bitmaps for futher use
             _bitmapData = new();
-            for (int i = 0; i < datasets.Count; i++)
-                _bitmapData.Add(new Bitmap(_imageWidth, _imageHeight));
+            ClearAllImages();
 
         } catch (Exception ex) {
             MessageBox.Show("Error: " + ex.Message);
@@ -169,33 +172,49 @@ public partial class ImageViewModel {
     }
 
     private void UpdateImageTools() {
-        LayerImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+        /*LayerImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
                   new Bitmap(_imageWidth, _imageHeight).GetHbitmap(),
                   IntPtr.Zero,
                   Int32Rect.Empty,
-                  BitmapSizeOptions.FromEmptyOptions());
+                  BitmapSizeOptions.FromEmptyOptions());*/
 
         foreach (var tool in _tools) {
             tool.Value.Execute(this);
         }
     }
 
+    //layer images
+    public void SetImage(BitmapSource bitmap) {
+        LayerImage = bitmap;
+        _bitmapData[CurrentFrame] = bitmap;
+    }
+
+    public void ClearCurrentImage() => ClearImage(CurrentFrame);
+    public void ClearAllImages() {
+        for (int i = 0; i < _bitmapData.Count; i++)
+            ClearImage(i);
+    }
+
+    private void ClearImage(int index) {
+        var bitmap = BitmapFactory.New(ImageWidth, ImageHeight);
+        LayerImage = bitmap;
+        _bitmapData[index] = bitmap;
+    }
+
     //mouse events
     public void OnLeftMouseDown(Point mousePoint) {
         if (_state is null) return;
-
-        _state.OnLeftMouseDown(mousePoint);
+        OnMouseLeftButtonDown?.Invoke(mousePoint);
     }
 
     public void OnLeftMouseUp(Point mousePoint) {
         if (_state is null) return;
-
-        _state.OnLeftMouseUp(mousePoint);
+        OnMouseLeftButtonUp?.Invoke(mousePoint);
     }
 
     public void OnMouseMove(Point mousePoint) {
         if (_state is null) return;
-        _state.OnMouseMove(mousePoint);
+        OnMouseHasMoved?.Invoke(mousePoint);
     }
 
     //https://stackoverflow.com/questions/22991009/how-to-get-hounsfield-units-in-dicom-file-using-fellow-oak-dicom-library-in-c-sh
@@ -228,9 +247,6 @@ public partial class ImageViewModel {
 
 public interface IImageViewState {
     public void OnStart(ImageViewModel viewModel);
-    public void OnLeftMouseDown(Point mousePoint);
-    public void OnLeftMouseUp(Point mousePoint);
-    public void OnMouseMove(Point mousePoint);
     public void OnExit();
 }
 
@@ -240,60 +256,68 @@ public class MouseHUToolState : IImageViewState {
 
     public void OnExit() {
         _viewModel.InfoText = "";
-    }
-
-    public void OnLeftMouseDown(Point mousePoint) {
-        _isMouseDown = true;
-        PostHu(mousePoint);
-    }
-
-    public void OnLeftMouseUp(Point mousePoint) {
-        _isMouseDown = false;
-    }
-
-    public void OnMouseMove(Point mousePoint) {
-        if (!_isMouseDown) return;
-        PostHu(mousePoint);
+        _viewModel.OnMouseLeftButtonDown -= StartReading;
+        _viewModel.OnMouseLeftButtonUp -= EndReading;
+        _viewModel.OnMouseHasMoved -= PostHu;
     }
 
     public void OnStart(ImageViewModel viewModel) {
         _viewModel = viewModel;
+        _isMouseDown = false;
+        _viewModel.OnMouseLeftButtonDown += StartReading;
+        _viewModel.OnMouseLeftButtonUp += EndReading;
+        _viewModel.OnMouseHasMoved += PostHu;
+
         _viewModel.InfoText = "";
     }
 
-    private void PostHu(Point point) =>
-        _viewModel.InfoText = $"X: {point.X}\r\nY: {point.Y}\r\nHU: {_viewModel.GetHU(point)}";
+    private void StartReading(Point point) {
+        _isMouseDown = true;
+        PostHu(point);
+    }
+
+    private void EndReading(Point point) {
+        _isMouseDown = false;
+    }
+
+    private void PostHu(Point point) {
+        if (_isMouseDown) 
+            _viewModel.InfoText = $"X: {point.X}\r\nY: {point.Y}\r\nHU: {_viewModel.GetHU(point)}";
+    }
     
 }
 
 public class DrawTool : IImageViewState {
     private ImageViewModel _viewModel;
     private System.Windows.Media.Color _drawColor;
+    private WriteableBitmap _bitmap;
 
     public void OnExit() {
+        _viewModel.OnMouseLeftButtonDown -= AddPixel;
+
+        _viewModel.ClearAllImages();
     }
 
-    public void OnLeftMouseDown(Point mousePoint) {
+    public void AddPixel(Point mousePoint) {
         var width = _viewModel.ImageWidth;
         var height = _viewModel.ImageHeight;
         int x = (int)mousePoint.X;
         int y = (int)mousePoint.Y;
 
-        var bitmap = BitmapFactory.New(width, height);
-        bitmap.SetPixel(x, y, 255, _drawColor);
-        _viewModel.LayerImage = bitmap;
-    }
-
-    public void OnLeftMouseUp(Point mousePoint) {
-        
-    }
-
-    public void OnMouseMove(Point mousePoint) {
-        
+        _bitmap.SetPixel(x, y, 255, _drawColor);
+        _viewModel.LayerImage = _bitmap;
     }
 
     public void OnStart(ImageViewModel viewModel) {
         _viewModel = viewModel;
+        _viewModel.OnMouseLeftButtonDown += AddPixel;
+
         _drawColor = Colors.Violet;
+
+        var width = _viewModel.ImageWidth;
+        var height = _viewModel.ImageHeight;
+        _bitmap = BitmapFactory.New(width, height);
+        _bitmap.DrawLine(width / 2, 0, width / 2, height, _drawColor);
+        _viewModel.LayerImage = _bitmap;
     }
 }
