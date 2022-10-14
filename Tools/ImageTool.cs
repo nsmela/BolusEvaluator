@@ -8,7 +8,7 @@ using System;
 using FellowOakDicom;
 
 namespace BolusEvaluator.ImageTools;
-    public class HighlightImageWindow : IImageTool {
+public class HighlightImageWindow : IImageTool {
 
     public string Label => "HighlightImageWindow";
 
@@ -36,7 +36,7 @@ namespace BolusEvaluator.ImageTools;
                   Int32Rect.Empty,
                   BitmapSizeOptions.FromEmptyOptions());
     }
-    }
+}
 
 
 public interface IImageTool {

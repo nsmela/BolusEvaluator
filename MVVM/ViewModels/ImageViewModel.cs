@@ -47,7 +47,7 @@ public partial class ImageViewModel {
     //frame data
     private List<DicomDataset>? _dicomData;
     private double _rescaleSlope, _rescaleIntercept; //for calculating HU
-    private int _imageWidth = 512, _imageHeight = 512; //image pixel sizes
+    [ObservableProperty] private int _imageWidth = 512, _imageHeight = 512; //image pixel sizes
     private List<Bitmap>? _bitmapData;
 
     //image tools
@@ -61,8 +61,8 @@ public partial class ImageViewModel {
 
     public ImageViewModel() {
         _tools = new();
-        _state = new MouseHUToolState(this);
-        _state.OnStart();
+        _state = new MouseHUToolState();
+        _state.OnStart(this);
 
         UpdateDisplayImage();
 
@@ -84,6 +84,12 @@ public partial class ImageViewModel {
             _tools.Remove(m.Value.Label);
 
             UpdateDisplayImage();
+        });
+
+        WeakReferenceMessenger.Default.Register<ChangeImageViewState>(this, (r, m) => {
+            _state.OnExit();
+            _state = m.Value;
+            _state.OnStart(this);
         });
     }
 
@@ -221,8 +227,7 @@ public partial class ImageViewModel {
 }
 
 public interface IImageViewState {
-    public void OnStart();
-
+    public void OnStart(ImageViewModel viewModel);
     public void OnLeftMouseDown(Point mousePoint);
     public void OnLeftMouseUp(Point mousePoint);
     public void OnMouseMove(Point mousePoint);
@@ -230,12 +235,8 @@ public interface IImageViewState {
 }
 
 public class MouseHUToolState : IImageViewState {
-    private readonly ImageViewModel _viewModel;
+    private ImageViewModel _viewModel;
     private bool _isMouseDown;
-
-    public MouseHUToolState(ImageViewModel viewModel) {
-        _viewModel = viewModel;
-    }
 
     public void OnExit() {
         _viewModel.InfoText = "";
@@ -252,11 +253,11 @@ public class MouseHUToolState : IImageViewState {
 
     public void OnMouseMove(Point mousePoint) {
         if (!_isMouseDown) return;
-
         PostHu(mousePoint);
     }
 
-    public void OnStart() {
+    public void OnStart(ImageViewModel viewModel) {
+        _viewModel = viewModel;
         _viewModel.InfoText = "";
     }
 
@@ -265,3 +266,34 @@ public class MouseHUToolState : IImageViewState {
     
 }
 
+public class DrawTool : IImageViewState {
+    private ImageViewModel _viewModel;
+    private System.Windows.Media.Color _drawColor;
+
+    public void OnExit() {
+    }
+
+    public void OnLeftMouseDown(Point mousePoint) {
+        var width = _viewModel.ImageWidth;
+        var height = _viewModel.ImageHeight;
+        int x = (int)mousePoint.X;
+        int y = (int)mousePoint.Y;
+
+        var bitmap = BitmapFactory.New(width, height);
+        bitmap.SetPixel(x, y, 255, _drawColor);
+        _viewModel.LayerImage = bitmap;
+    }
+
+    public void OnLeftMouseUp(Point mousePoint) {
+        
+    }
+
+    public void OnMouseMove(Point mousePoint) {
+        
+    }
+
+    public void OnStart(ImageViewModel viewModel) {
+        _viewModel = viewModel;
+        _drawColor = Colors.Violet;
+    }
+}

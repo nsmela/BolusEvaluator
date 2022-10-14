@@ -21,13 +21,18 @@ public partial class ToolbarViewModel {
 
     private void IsBusy (bool value) => WeakReferenceMessenger.Default.Send(new IsBusyMessage(value));
     private bool _isHighlightImageActive = false;
+
     [RelayCommand]
     private async Task ShowHighlight() {
         _isHighlightImageActive = !_isHighlightImageActive;
 
         if(_isHighlightImageActive) WeakReferenceMessenger.Default.Send(new AddImageTool(new HighlightImageWindow()));
         else WeakReferenceMessenger.Default.Send(new DeleteImageTool(new HighlightImageWindow()));
+    }
 
+    [RelayCommand]
+    private async Task DrawMode() {
+        WeakReferenceMessenger.Default.Send(new ChangeImageViewState(new DrawTool()));
     }
 
     [RelayCommand]

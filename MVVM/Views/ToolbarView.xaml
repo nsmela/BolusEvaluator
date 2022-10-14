@@ -15,6 +15,6 @@
         <Button Style="{DynamicResource MahApps.Styles.Button.Square}" Height="32" Margin="1 2 1 2"
                 Content="highlight" Command="{Binding ShowHighlightCommand}" />
         <Button Style="{DynamicResource MahApps.Styles.Button.Square}" Height="32" Margin="1 2 1 2"
-                Content="draw" Command="" />
+                Content="draw" Command="{Binding DrawModeCommand}" />
     </StackPanel>
 </UserControl>
