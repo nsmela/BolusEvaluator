@@ -64,7 +64,7 @@
                         />
                 </StackPanel>
 
-                <Slider Grid.Row="1" Grid.Column="0" Margin="4"
+                <Slider Grid.Row="1" Grid.Column="0" Margin="8" VerticalAlignment="Top" Height="42"
                         Minimum="0" Maximum="{Binding MaxFrames}"
                         Value="{Binding CurrentFrame}" mah:SliderHelper.ChangeValueBy="LargeChange"
                         AutoToolTipPlacement="TopLeft"
@@ -74,10 +74,8 @@
                     </Slider.Resources>
                 </Slider>
                 <StackPanel Grid.Column="1" Grid.Row="1">
-                    <TextBlock Text="{Binding MousePointText}" />
+                    <TextBlock Text="{Binding InfoText}" />
                 </StackPanel>
-
-
             </Grid>
         </Border>
     </Grid>

@@ -40,8 +40,9 @@ public partial class ImageViewModel {
 
     //test image
     [ObservableProperty] private bool _showTestImage = false;
-    //point on image 
-    [ObservableProperty] private string? _mousePointText;
+
+    //info text bottom right
+    [ObservableProperty] private string? _infoText;
 
     //frame data
     private List<DicomDataset>? _dicomData;
@@ -51,7 +52,7 @@ public partial class ImageViewModel {
 
     //image tools
     private Dictionary<string, IImageTool> _tools;
-
+    private IImageViewState _state;
     private bool _isBusy = false;
     private void IsBusy(bool value) {
         _isBusy = value;
@@ -60,6 +61,8 @@ public partial class ImageViewModel {
 
     public ImageViewModel() {
         _tools = new();
+        _state = new MouseHUToolState(this);
+        _state.OnStart();
 
         UpdateDisplayImage();
 
@@ -112,7 +115,7 @@ public partial class ImageViewModel {
             _imageWidth = _dicomData[0].GetSingleValue<int>(DicomTag.Columns);
             _imageHeight = _dicomData[0].GetSingleValue<int>(DicomTag.Rows);
 
-            //creating blank bitmaps for futhur use
+            //creating blank bitmaps for futher use
             _bitmapData = new();
             for (int i = 0; i < datasets.Count; i++)
                 _bitmapData.Add(new Bitmap(_imageWidth, _imageHeight));
@@ -159,15 +162,40 @@ public partial class ImageViewModel {
         UpdateImageTools();
     }
 
-    public void UpdateMousePoint(Point mousePoint) {
-        MousePointText = $"X: {mousePoint.X}\r\nY: {mousePoint.Y}\r\nHU: {GetHU(mousePoint)}";
-        var huValue = GetHU(mousePoint);
+    private void UpdateImageTools() {
+        LayerImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                  new Bitmap(_imageWidth, _imageHeight).GetHbitmap(),
+                  IntPtr.Zero,
+                  Int32Rect.Empty,
+                  BitmapSizeOptions.FromEmptyOptions());
+
+        foreach (var tool in _tools) {
+            tool.Value.Execute(this);
+        }
+    }
+
+    //mouse events
+    public void OnLeftMouseDown(Point mousePoint) {
+        if (_state is null) return;
+
+        _state.OnLeftMouseDown(mousePoint);
+    }
+
+    public void OnLeftMouseUp(Point mousePoint) {
+        if (_state is null) return;
+
+        _state.OnLeftMouseUp(mousePoint);
+    }
+
+    public void OnMouseMove(Point mousePoint) {
+        if (_state is null) return;
+        _state.OnMouseMove(mousePoint);
     }
 
     //https://stackoverflow.com/questions/22991009/how-to-get-hounsfield-units-in-dicom-file-using-fellow-oak-dicom-library-in-c-sh
     //https://www.sciencedirect.com/topics/medicine-and-dentistry/hounsfield-scale
     //Hounsfield units = (Rescale Slope * Pixel Value) + Rescale Intercept
-    private double GetHU(Point point) {
+    public double GetHU(Point point) {
         if (_dicomData is null) return 0.0f;
         var frame = _dicomData[CurrentFrame];
         var header = DicomPixelData.Create(frame);
@@ -189,17 +217,51 @@ public partial class ImageViewModel {
         }
     }
 
-    private void UpdateImageTools() {
-        LayerImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                  new Bitmap(_imageWidth, _imageHeight).GetHbitmap(),
-                  IntPtr.Zero,
-                  Int32Rect.Empty,
-                  BitmapSizeOptions.FromEmptyOptions());
 
-        foreach (var tool in _tools) {
-            tool.Value.Execute(this);
-        }
-    }
 }
 
+public interface IImageViewState {
+    public void OnStart();
+
+    public void OnLeftMouseDown(Point mousePoint);
+    public void OnLeftMouseUp(Point mousePoint);
+    public void OnMouseMove(Point mousePoint);
+    public void OnExit();
+}
+
+public class MouseHUToolState : IImageViewState {
+    private readonly ImageViewModel _viewModel;
+    private bool _isMouseDown;
+
+    public MouseHUToolState(ImageViewModel viewModel) {
+        _viewModel = viewModel;
+    }
+
+    public void OnExit() {
+        _viewModel.InfoText = "";
+    }
+
+    public void OnLeftMouseDown(Point mousePoint) {
+        _isMouseDown = true;
+        PostHu(mousePoint);
+    }
+
+    public void OnLeftMouseUp(Point mousePoint) {
+        _isMouseDown = false;
+    }
+
+    public void OnMouseMove(Point mousePoint) {
+        if (!_isMouseDown) return;
+
+        PostHu(mousePoint);
+    }
+
+    public void OnStart() {
+        _viewModel.InfoText = "";
+    }
+
+    private void PostHu(Point point) =>
+        _viewModel.InfoText = $"X: {point.X}\r\nY: {point.Y}\r\nHU: {_viewModel.GetHU(point)}";
+    
+}
 

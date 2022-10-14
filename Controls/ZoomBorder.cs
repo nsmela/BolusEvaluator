@@ -48,6 +48,7 @@ public class ZoomBorder : Border {
             this.MouseRightButtonDown += child_MouseRightButtonDown;
             this.MouseRightButtonUp += child_MouseRightButtonUp;
             this.MouseLeftButtonDown += child_MouseLeftButtonDown;
+            this.MouseLeftButtonUp +=  child_MouseLeftButtonUp;
             this.MouseMove += child_MouseMove;
         }
     }
@@ -106,7 +107,15 @@ public class ZoomBorder : Border {
         if (child != null) {
             var point = GetImageCoordsAt(e);
             var viewModel = ((ImageViewModel)base.DataContext);
-            viewModel.UpdateMousePoint(point);
+            viewModel.OnLeftMouseDown(point);
+        }
+    }
+
+    private void child_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+        if (child != null) {
+            var point = GetImageCoordsAt(e);
+            var viewModel = ((ImageViewModel)base.DataContext);
+            viewModel.OnLeftMouseUp(point);
         }
     }
 
@@ -124,23 +133,30 @@ public class ZoomBorder : Border {
                 Vector v = start - e.GetPosition(this);
                 tt.X = origin.X - v.X;
                 tt.Y = origin.Y - v.Y;
+            } else {
+                var point = GetImageCoordsAt(e);
+                var viewModel = ((ImageViewModel)base.DataContext);
+                viewModel.OnMouseMove(point);
             }
         }
     }
 
-    public Point GetImageCoordsAt(MouseButtonEventArgs e) {
-        if (child != null && child.IsMouseOver) {
-            var controlSpacePosition = e.GetPosition(child);
-            var imageControl = this.Child as Image;
-            if (imageControl != null && imageControl.Source != null) {
-                // Convert from control space to image space
-                var x = Math.Floor(controlSpacePosition.X * imageControl.Source.Width / imageControl.ActualWidth);
-                var y = Math.Floor(controlSpacePosition.Y * imageControl.Source.Height / imageControl.ActualHeight);
+    public Point GetImageCoordsAt(MouseButtonEventArgs e) => GetImageCoordsAt(e.GetPosition(child));
 
-                return new Point(x, y);
-            }
+    public Point GetImageCoordsAt(MouseEventArgs e) => GetImageCoordsAt(e.GetPosition(child));
+
+    public Point GetImageCoordsAt(Point point) {
+        var controlSpacePosition = point;
+        var imageControl = this.Child as Image;
+        if (imageControl != null && imageControl.Source != null) {
+            // Convert from control space to image space
+            var x = Math.Floor(controlSpacePosition.X * imageControl.Source.Width / imageControl.ActualWidth);
+            var y = Math.Floor(controlSpacePosition.Y * imageControl.Source.Height / imageControl.ActualHeight);
+
+            return new Point(x, y);
         }
         return new Point(-1, -1);
+    
     }
     #endregion
 }
