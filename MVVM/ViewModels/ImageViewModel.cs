@@ -1,20 +1,16 @@
-﻿using BolusEvaluator.Messages;
+﻿using BolusEvaluator.ImageTools;
+using BolusEvaluator.Messages;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using ControlzEx.Standard;
 using FellowOakDicom;
 using FellowOakDicom.Imaging;
 using FellowOakDicom.Imaging.Render;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 using Color = System.Drawing.Color;
 using Point = System.Windows.Point;
 
@@ -23,9 +19,6 @@ namespace BolusEvaluator.MVVM.ViewModels;
 [ObservableObject]
 [ObservableRecipient]
 public partial class ImageViewModel {
-    //events
-    public event Action<ImageViewModel> OnDisplayUpdated;
-
     //images
     [ObservableProperty] private ImageSource? _displayImage;
     [ObservableProperty] private ImageSource? _layerImage;
@@ -71,17 +64,16 @@ public partial class ImageViewModel {
             LoadDataset(m.Value);
         });
 
-        WeakReferenceMessenger.Default.Register<ShowOverlayMessage>(this, (r, m) => {
-            ToggleTestImage();
-        });
-
         WeakReferenceMessenger.Default.Register<AddImageTool>(this, (r, m) => {
             if (_tools.Contains(m.Value)) return;
 
             _tools.Add(m.Value);
+
+            UpdateDisplayImage();
         });
     }
 
+    public DicomDataset GetCurrentFrameData() => _dicomData[CurrentFrame];
 
     private void LoadDataset(List<DicomDataset> datasets) {
         if (datasets == null || datasets.Count < 1) {
@@ -159,13 +151,6 @@ public partial class ImageViewModel {
     public void UpdateMousePoint(Point mousePoint) {
         MousePointText = $"X: {mousePoint.X}\r\nY: {mousePoint.Y}\r\nHU: {GetHU(mousePoint)}";
         var huValue = GetHU(mousePoint);
-        ToggleTestImage();
-    }
-
-    public void ToggleTestImage() {
-        ShowTestImage = !ShowTestImage;
-        if (ShowTestImage) UpdateTestBitmap();
-        else LayerImage = null;
     }
 
     //https://stackoverflow.com/questions/22991009/how-to-get-hounsfield-units-in-dicom-file-using-fellow-oak-dicom-library-in-c-sh
@@ -181,7 +166,7 @@ public partial class ImageViewModel {
         return GetHUValue(pixelMap, (int)point.X, (int)point.Y);
     }
 
-    private double GetHUValue(IPixelData pixelMap, int iX, int iY) {
+    public double GetHUValue(IPixelData pixelMap, int iX, int iY) {
         if (pixelMap is null) return -2000;
 
         int index = (int)(iX + pixelMap.Width * iY);
@@ -193,33 +178,6 @@ public partial class ImageViewModel {
             default: 
                 return 0.0f;
         }
-    }
-
-    private void UpdateTestBitmap() {
-        if (_dicomData is null) return;
-
-        // Define parameters used to create the BitmapSource.
-        // Initialize the image with data.
-        var frame = _dicomData[CurrentFrame];
-        var header = DicomPixelData.Create(frame);
-        var pixelMap = (PixelDataFactory.Create(header, 0));
-
-        double pixel;
-        var bitmap = new Bitmap(pixelMap.Width, pixelMap.Height);
-        for(int x = 0; x < pixelMap.Width; x++) {
-            for(int y = 0; y < pixelMap.Height; y++) {
-                pixel = GetHUValue(pixelMap, x, y);
-                if (pixel > LowerWindowValue && pixel < UpperWindowValue) bitmap.SetPixel(x, y, Color.Red);
-                else bitmap.SetPixel(x, y, Color.Black);
-            }
-        }
-
-        LayerImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                  bitmap.GetHbitmap(),
-                  IntPtr.Zero,
-                  Int32Rect.Empty,
-                  BitmapSizeOptions.FromEmptyOptions());
-
     }
 
     private void UpdateImageTools() {

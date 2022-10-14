@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using BolusEvaluator.Messages;
+using BolusEvaluator.ImageTools;
 
 namespace BolusEvaluator.MVVM.ViewModels;
 
@@ -22,8 +23,8 @@ public partial class ToolbarViewModel {
 
     [RelayCommand]
     private async Task ShowOverlay() {
-         WeakReferenceMessenger.Default.Send(new ShowOverlayMessage(true));
-        WeakReferenceMessenger.Default.Send(new AddImageTool(new IImageTool()));
+         //WeakReferenceMessenger.Default.Send(new ShowOverlayMessage(true));
+        WeakReferenceMessenger.Default.Send(new AddImageTool(new HighlightImageWindow()));
 
     }
 

@@ -10,34 +10,30 @@ using FellowOakDicom;
 namespace BolusEvaluator.ImageTools;
     public class HighlightImageWindow : IImageTool {
 
-
-            
-public void Execute(ImageViewModel viewModel) {
-        if (_dicomData is null) return;
+    public void Execute(ImageViewModel viewModel) {
+        var dicomData = viewModel.GetCurrentFrameData();
+        if (dicomData is null) return;
         // Define parameters used to create the BitmapSource.
         // Initialize the image with data.
-        var frame = _dicomData[CurrentFrame];
-        var header = DicomPixelData.Create(frame);
+        var header = DicomPixelData.Create(dicomData);
         var pixelMap = (PixelDataFactory.Create(header, 0));
 
         double pixel;
         var bitmap = new Bitmap(pixelMap.Width, pixelMap.Height);
         for (int x = 0; x < pixelMap.Width; x++) {
             for (int y = 0; y < pixelMap.Height; y++) {
-                pixel = GetHUValue(pixelMap, x, y);
-                if (pixel > LowerWindowValue && pixel < UpperWindowValue) bitmap.SetPixel(x, y, Color.Red);
+                pixel = viewModel.GetHUValue(pixelMap, x, y);
+                if (pixel > viewModel.LowerWindowValue && pixel < viewModel.UpperWindowValue) bitmap.SetPixel(x, y, Color.Red);
                 else bitmap.SetPixel(x, y, Color.Black);
             }
         }
 
-        LayerImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+        viewModel.LayerImage = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
                   bitmap.GetHbitmap(),
                   IntPtr.Zero,
                   Int32Rect.Empty,
                   BitmapSizeOptions.FromEmptyOptions());
     }
-
- 
 }
 
 
