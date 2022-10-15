@@ -35,6 +35,7 @@ internal class DicomService : IDicomService {
     public double MinWindowLevel { get; private set; }
     public double LowerWindowValue { get; private set; }
     public double UpperWindowValue { get; private set; }
+    public Rect ImageSize => new Rect(0, 0, _imageWidth, _imageHeight);
 
     public void SetLowerWindowLevel(double level) {
         LowerWindowValue = level;

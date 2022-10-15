@@ -1,19 +1,9 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
-using FellowOakDicom;
-using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace BolusEvaluator.MVVM.ViewModels;
-
-public class DicomDatasetMessage : ValueChangedMessage<List<DicomDataset>> {
-    public DicomDatasetMessage(List<DicomDataset> value) : base(value) { }
-}
 
 public class DicomDetailsMessage : ValueChangedMessage<string> {
     public DicomDetailsMessage(string value) : base(value) { }
