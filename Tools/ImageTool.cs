@@ -15,8 +15,8 @@ public class HighlightImageWindow : IImageTool {
 
     //write over pixels
     public void Execute(ImageViewModel viewModel) {
-        if (viewModel.LayerImage is null) return;
-        var dicomData = viewModel.GetCurrentFrameData();
+       /* if (viewModel.LayerImage is null) return;
+        var dicomData = _dicom
         if (dicomData is null) return;
 
         // Define parameters used to create the BitmapSource.
@@ -34,7 +34,7 @@ public class HighlightImageWindow : IImageTool {
             }
         }
 
-        viewModel.LayerImage = bitmap;
+        viewModel.LayerImage = bitmap; */
     }
 }
 

@@ -3,13 +3,9 @@ using BolusEvaluator.Messages;
 using BolusEvaluator.Services.DicomService;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
-using FellowOakDicom;
-using FellowOakDicom.Imaging;
-using FellowOakDicom.Imaging.Render;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Point = System.Windows.Point;
@@ -78,7 +74,7 @@ public partial class ImageViewModel {
 
             _tools.Add(m.Value.Label, m.Value);
 
-            UpdateDisplayImage();
+           // UpdateDisplayImage();
         });
 
         WeakReferenceMessenger.Default.Register<DeleteImageTool>(this, (r, m) => {
@@ -86,7 +82,7 @@ public partial class ImageViewModel {
 
             _tools.Remove(m.Value.Label);
 
-            UpdateDisplayImage();
+            //UpdateDisplayImage();
         });
 
         WeakReferenceMessenger.Default.Register<ChangeImageViewState>(this, (r, m) => {
@@ -141,13 +137,13 @@ public partial class ImageViewModel {
 
     public void ClearCurrentImage() {
         ClearImage(CurrentFrame);
-        UpdateDisplayImage();
+        //UpdateDisplayImage();
     }
     public void ClearAllImages() {
         for (int i = 0; i < _bitmapData.Count; i++)
             ClearImage(i);
 
-        UpdateDisplayImage();
+        //UpdateDisplayImage();
     }
 
     private void ClearImage(int index) {
@@ -172,33 +168,6 @@ public partial class ImageViewModel {
         if (_state is null) return;
         OnMouseHasMoved?.Invoke(mousePoint);
     }
-
-    //https://stackoverflow.com/questions/22991009/how-to-get-hounsfield-units-in-dicom-file-using-fellow-oak-dicom-library-in-c-sh
-    //https://www.sciencedirect.com/topics/medicine-and-dentistry/hounsfield-scale
-    //Hounsfield units = (Rescale Slope * Pixel Value) + Rescale Intercept
-    public double GetHU(Point point) {
-        if (_dicomData is null) return 0.0f;
-        var frame = _dicomData[CurrentFrame];
-        var header = DicomPixelData.Create(frame);
-        var pixelMap = (PixelDataFactory.Create(header, 0));
-        return GetHUValue(pixelMap, (int)point.X, (int)point.Y);
-    }
-
-    public double GetHUValue(IPixelData pixelMap, int iX, int iY) {
-        if (pixelMap is null) return -2000;
-
-        int index = (int)(iX + pixelMap.Width * iY);
-        switch (pixelMap) {
-            case GrayscalePixelDataU16:
-                return ((GrayscalePixelDataU16)pixelMap).Data[index] * _rescaleSlope + _rescaleIntercept;
-            case GrayscalePixelDataS16:
-                return ((GrayscalePixelDataS16)pixelMap).Data[index] * _rescaleSlope + _rescaleIntercept;
-            default:
-                return 0.0f;
-        }
-    }
-
-
 }
 
 public interface IImageViewState {
@@ -208,6 +177,7 @@ public interface IImageViewState {
 
 public class MouseHUToolState : IImageViewState {
     private ImageViewModel _viewModel;
+    private IDicomService _dicom;
     private bool _isMouseDown;
 
     public void OnExit() {
@@ -224,6 +194,8 @@ public class MouseHUToolState : IImageViewState {
         _viewModel.OnMouseLeftButtonUp += EndReading;
         _viewModel.OnMouseHasMoved += PostHu;
 
+        _dicom = App.AppHost.Services.GetService<IDicomService>();
+
         _viewModel.InfoText = "";
     }
 
@@ -238,7 +210,7 @@ public class MouseHUToolState : IImageViewState {
 
     private void PostHu(Point point) {
         if (_isMouseDown) 
-            _viewModel.InfoText = $"X: {point.X}\r\nY: {point.Y}\r\nHU: {_viewModel.GetHU(point)}";
+            _viewModel.InfoText = $"X: {point.X}\r\nY: {point.Y}\r\nHU: {_dicom.GetHU(point)}";
     }
     
 }

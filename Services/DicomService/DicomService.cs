@@ -3,9 +3,7 @@ using FellowOakDicom.Imaging;
 using FellowOakDicom.Imaging.Render;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Media.Imaging;
 
 namespace BolusEvaluator.Services.DicomService;
@@ -134,6 +132,30 @@ internal class DicomService : IDicomService {
 
         _bitmap = _currentImage.RenderImage().AsWriteableBitmap();
         OnDicomImageUpdated?.Invoke();
+    }
+
+    //https://stackoverflow.com/questions/22991009/how-to-get-hounsfield-units-in-dicom-file-using-fellow-oak-dicom-library-in-c-sh
+    //https://www.sciencedirect.com/topics/medicine-and-dentistry/hounsfield-scale
+    //Hounsfield units = (Rescale Slope * Pixel Value) + Rescale Intercept
+    public double GetHU(Point point) {
+        if (_data is null) return 0.0f;
+        var header = DicomPixelData.Create(_data[CurrentFrame]);
+        var pixelMap = (PixelDataFactory.Create(header, 0));
+        return GetHUValue(pixelMap, (int)point.X, (int)point.Y);
+    }
+
+    private double GetHUValue(IPixelData pixelMap, int iX, int iY) {
+        if (pixelMap is null) return -2000;
+
+        int index = (int)(iX + pixelMap.Width * iY);
+        switch (pixelMap) {
+            case GrayscalePixelDataU16:
+                return ((GrayscalePixelDataU16)pixelMap).Data[index] * _rescaleSlope + _rescaleIntercept;
+            case GrayscalePixelDataS16:
+                return ((GrayscalePixelDataS16)pixelMap).Data[index] * _rescaleSlope + _rescaleIntercept;
+            default:
+                return 0.0f;
+        }
     }
 }
 
