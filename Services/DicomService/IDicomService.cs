@@ -20,6 +20,7 @@ namespace BolusEvaluator.Services.DicomService {
         void SetLowerWindowLevel(double level);
         void SetUpperWindowLevel(double level);
         void SetWindowLevel(double lowerLevel, double upperLevel);
+        void SetFrame(int frameIndex);
         void LoadDataset(List<DicomDataset> datasets);
 
         //events

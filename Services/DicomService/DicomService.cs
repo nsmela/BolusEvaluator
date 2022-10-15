@@ -106,6 +106,7 @@ internal class DicomService : IDicomService {
         }
         _isBusy = false;
         OnDatasetLoaded?.Invoke();
+        UpdateFrame();
     }
 
     private void UpdateFrame() {

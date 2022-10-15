@@ -31,14 +31,14 @@ public partial class ImageViewModel {
     [ObservableProperty] private double? _minWindowValue = -40;
     [ObservableProperty] private double? _lowerWindowValue;
     [ObservableProperty] private double? _upperWindowValue;
-    partial void OnUpperWindowValueChanged(double? value) => UpdateDisplayImage();
-    partial void OnLowerWindowValueChanged(double? value) => UpdateDisplayImage();
+    partial void OnUpperWindowValueChanged(double? value) => _dicom.SetUpperWindowLevel((double)value);
+    partial void OnLowerWindowValueChanged(double? value) => _dicom.SetLowerWindowLevel((double)value);
 
     //current frame slider
     [ObservableProperty] private int _currentFrame;
     [ObservableProperty] private int _maxFrames;
 
-    partial void OnCurrentFrameChanged(int value) => UpdateImageFrame();
+    partial void OnCurrentFrameChanged(int value) => _dicom.SetFrame(value);
 
     //test image
     [ObservableProperty] private bool _showTestImage = false;
@@ -47,9 +47,7 @@ public partial class ImageViewModel {
     [ObservableProperty] private string? _infoText;
 
     //frame data
-    private List<DicomDataset>? _dicomData;
     private List<BitmapSource>? _bitmapData;
-    private double _rescaleSlope, _rescaleIntercept; //for calculating HU
     [ObservableProperty] private int _imageWidth = 512, _imageHeight = 512; //image pixel sizes
 
     //image tools
@@ -68,15 +66,12 @@ public partial class ImageViewModel {
     public ImageViewModel() {
         _dicom = App.AppHost.Services.GetService<IDicomService>();
 
+        _dicom.OnNewFrame += NewFrame;
+        _dicom.OnDicomImageUpdated += ImageUpdated;
+
         _tools = new();
         _state = new MouseHUToolState();
         _state.OnStart(this);
-
-        UpdateDisplayImage();
-
-        WeakReferenceMessenger.Default.Register<DicomDatasetMessage>(this, (r, m) => {
-            LoadDataset(m.Value);
-        });
 
         WeakReferenceMessenger.Default.Register<AddImageTool>(this, (r, m) => {
         if (_tools.ContainsKey(m.Value.Label)) return; 
@@ -101,87 +96,31 @@ public partial class ImageViewModel {
         });
     }
 
-    public DicomDataset GetCurrentFrameData() => _dicomData[CurrentFrame];
+    //public DicomDataset GetCurrentFrameData() => _dicomData[CurrentFrame];
 
-    private void LoadDataset(List<DicomDataset> datasets) {
-        if (datasets == null || datasets.Count < 1) {
-            DisplayImage = null;
-            _dicomData = null;
-            return;
-        }
 
-        _dicomData = datasets;
-        _bitmapData = new();
-        var bitmap = BitmapFactory.New(ImageWidth, ImageHeight);
-        for (int i = 0; i < datasets.Count; i++) {
-            _bitmapData.Add(bitmap);
-        }
+    private void NewFrame() {
+        //frame slider
+        CurrentFrame = _dicom.CurrentFrame;
+        MaxFrames = _dicom.FrameCount;
 
-        try {
-            IsBusy(true);//starts loading bar
-
-            CurrentFrame = 0;
-            MaxFrames = datasets.Count - 1;
-
-            var range = _dicomData[0].GetValue<double>(DicomTag.WindowWidth, 0) / 2;
-            var center = _dicomData[0].GetValue<double>(DicomTag.WindowCenter, 0);
-
-            LowerWindowValue = center - range;
-            UpperWindowValue = center + range;
-
-            _rescaleSlope = _dicomData[0].GetSingleValue<double>(DicomTag.RescaleSlope);
-            _rescaleIntercept = _dicomData[0].GetSingleValue<double>(DicomTag.RescaleIntercept);
-
-            _imageWidth = _dicomData[0].GetSingleValue<int>(DicomTag.Columns);
-            _imageHeight = _dicomData[0].GetSingleValue<int>(DicomTag.Rows);
-
-            //creating blank bitmaps for futher use
-
-        } catch (Exception ex) {
-            MessageBox.Show("Error: " + ex.Message);
-        }
-
-        IsBusy(false);
-        UpdateImageFrame();
+        //window level slider
+        MinWindowValue = _dicom.MinWindowLevel;
+        MaxWindowValue = _dicom.MaxWindowLevel;
     }
 
-    //new image frame
-    private void UpdateImageFrame() {
-        if (_dicomData is null) return;
+    private void ImageUpdated() {
+        //window level slider
+        LowerWindowValue = _dicom.LowerWindowValue;
+        UpperWindowValue = _dicom.UpperWindowValue;
 
-        var image = new DicomImage(_dicomData[CurrentFrame]);
+        DisplayImage = _dicom.GetDicomImage;
+    }
 
-        var header = DicomPixelData.Create(_dicomData[CurrentFrame]);
-        var pixelMap = PixelDataFactory.Create(header, 0);
-        var range = pixelMap.GetMinMax();
-
-        MinWindowValue = range.Minimum;
-        MaxWindowValue = range.Maximum;
-
-        LayerImage = _bitmapData[CurrentFrame];
+    private void WindowLevelChanged() {
         
-
-        UpdateDisplayImage();
-        OnNewFrame?.Invoke();
     }
 
-    //changed the Display so new image needed
-    private void UpdateDisplayImage() {
-        if (_isBusy) return;
-        if (_dicomData is null) return;
-        if (_dicomData.Count < 1) return;
-
-        var window = (UpperWindowValue - LowerWindowValue);
-        var center = (LowerWindowValue + (window / 2));
-
-        var image = new DicomImage(_dicomData[CurrentFrame]);
-
-        image.WindowWidth = window is null ? 100.0f : (double)window;
-        image.WindowCenter = center is null ? 0.0f : (double)center;
-
-        DisplayImage = image.RenderImage().AsWriteableBitmap();
-        UpdateImageTools();
-    }
 
     private void UpdateImageTools() {
         foreach (var tool in _tools) {
