@@ -1,10 +1,12 @@
 ﻿using BolusEvaluator.ImageTools;
 using BolusEvaluator.Messages;
+using BolusEvaluator.Services.DicomService;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using FellowOakDicom;
 using FellowOakDicom.Imaging;
 using FellowOakDicom.Imaging.Render;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -17,6 +19,9 @@ namespace BolusEvaluator.MVVM.ViewModels;
 [ObservableObject]
 [ObservableRecipient]
 public partial class ImageViewModel {
+    //Services
+    private readonly IDicomService _dicom;
+
     //images
     [ObservableProperty] private ImageSource? _displayImage;
     [ObservableProperty] private ImageSource? _layerImage;
@@ -61,6 +66,8 @@ public partial class ImageViewModel {
     public event Action OnImageUpdated, OnNewFrame;
 
     public ImageViewModel() {
+        _dicom = App.AppHost.Services.GetService<IDicomService>();
+
         _tools = new();
         _state = new MouseHUToolState();
         _state.OnStart(this);

@@ -12,15 +12,23 @@ using System.Collections.Generic;
 using System.Windows;
 using BolusEvaluator.Messages;
 using BolusEvaluator.ImageTools;
+using BolusEvaluator.Services.DicomService;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BolusEvaluator.MVVM.ViewModels;
 
 [ObservableObject]
 public partial class ToolbarViewModel {
+    private readonly IDicomService _dicom;
+
     [ObservableProperty] private string? _currentTool = string.Empty; //placeholder for more advanced tools    
 
     private void IsBusy (bool value) => WeakReferenceMessenger.Default.Send(new IsBusyMessage(value));
     private bool _isHighlightImageActive = false;
+    public ToolbarViewModel() {
+        _dicom = App.AppHost.Services.GetService<IDicomService>();
+    }
+
 
     [RelayCommand]
     private async Task ShowHighlight() {
@@ -51,7 +59,8 @@ public partial class ToolbarViewModel {
 
             //generating an image
             var file = await DicomFile.OpenAsync(openFile.FileName);
-            WeakReferenceMessenger.Default.Send(new DicomDatasetMessage(await GetData(openFile)));
+            var dataset = await GetData(openFile);
+            _dicom.LoadDataset(dataset);
 
             //dump DICOM tags
             WeakReferenceMessenger.Default.Send(new DicomDetailsMessage( await GetAllTags(file)));

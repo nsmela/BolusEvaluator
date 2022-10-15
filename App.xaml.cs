@@ -1,4 +1,5 @@
 ﻿using BolusEvaluator.MVVM.Views;
+using BolusEvaluator.Services.DicomService;
 using FellowOakDicom;
 using FellowOakDicom.Imaging;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,7 +14,7 @@ namespace BolusEvaluator;
         AppHost = Host.CreateDefaultBuilder()
             .ConfigureServices((hostContext, services) => {
                 services.AddSingleton<MainView>();
-                services.AddSingleton<ImageView>();
+                services.AddSingleton<IDicomService, DicomService>();
             })
             .Build();
 
