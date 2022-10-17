@@ -38,7 +38,6 @@
                                     <DrawingImage >
                                         <DrawingImage.Drawing>
                                             <DrawingGroup>
-
                                                 <ImageDrawing Rect="0,0,512,512" ImageSource="{Binding DisplayImage}"/>
                                                 <ImageDrawing Rect="0,0,512,512" ImageSource="{Binding LayerImage}" />
                                             </DrawingGroup>
@@ -47,6 +46,7 @@
                                 </Image.Source>
                             </Image>
                         </controls:ZoomBorder>
+                        <TextBlock Text="{Binding LayerText}" Foreground="AliceBlue"/>
                     </Canvas>
                 </Border>
 

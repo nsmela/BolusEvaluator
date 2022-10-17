@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using System;
@@ -22,6 +23,8 @@ public class ImageDisplayActionMessage : ValueChangedMessage<Action<ImageViewMod
 public partial class MainViewModel {
     [ObservableProperty] private bool _isBusy; //IsBusy observable property
     [ObservableProperty] private bool _isNotBusy;
+    [ObservableProperty] private bool _dicomDumpFlyoutOpen;
+    [ObservableProperty] private bool _isHeadersRead;
     [ObservableProperty] private string? _fileInfo;
 
     partial void OnIsBusyChanged(bool value) { 
@@ -30,7 +33,14 @@ public partial class MainViewModel {
 
     public MainViewModel() {
         WeakReferenceMessenger.Default.Register<DicomDetailsMessage>(this, (r, m) => {
-            FileInfo =m.Value;
+            if (m.Value == String.Empty) {
+                DicomDumpFlyoutOpen = false; //close flyout
+                IsHeadersRead = false; //hide Dicom button
+                return;
+            }
+
+            IsHeadersRead = true;
+            FileInfo = m.Value;
         });
 
         WeakReferenceMessenger.Default.Register<IsBusyMessage>(this, (r, m) => {
@@ -38,7 +48,18 @@ public partial class MainViewModel {
         });
 
         IsBusy = false;
+        DicomDumpFlyoutOpen = false;
+        IsHeadersRead = false;
     }
 
+    [RelayCommand]
+    public void ToggleDicomDumpFlyout() {
+        if(FileInfo == String.Empty) {
+            DicomDumpFlyoutOpen = false;
+            return;
+        }
+
+        DicomDumpFlyoutOpen = !DicomDumpFlyoutOpen;
+    }
 }
 

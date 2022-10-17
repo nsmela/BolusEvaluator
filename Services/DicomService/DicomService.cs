@@ -4,6 +4,7 @@ using FellowOakDicom.Imaging.Render;
 using System;
 using System.Collections.Generic;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace BolusEvaluator.Services.DicomService;
@@ -35,7 +36,14 @@ internal class DicomService : IDicomService {
     public double MinWindowLevel { get; private set; }
     public double LowerWindowValue { get; private set; }
     public double UpperWindowValue { get; private set; }
-    public Rect ImageSize => new Rect(0, 0, _imageWidth, _imageHeight);
+    public string FrameText {
+        get {
+            if (_data is null) return string.Empty;
+
+            //var patientDistance = _data[CurrentFrame].GetValue(DicomTag.PatientPosition);
+            return "Testing";
+        }
+    }
 
     public void SetLowerWindowLevel(double level) {
         LowerWindowValue = level;
@@ -143,6 +151,22 @@ internal class DicomService : IDicomService {
         var header = DicomPixelData.Create(_data[CurrentFrame]);
         var pixelMap = (PixelDataFactory.Create(header, 0));
         return GetHUValue(pixelMap, (int)point.X, (int)point.Y);
+    }
+
+    public double[,] GetHUs() {
+        if (_data is null || _data.Count < 1) return null;
+
+        var header = DicomPixelData.Create(_data[CurrentFrame]);
+        var pixelMap = (PixelDataFactory.Create(header, 0));
+
+        double[,] pixels = new double[pixelMap.Height, pixelMap.Width];
+        for (int row = 0; row < pixelMap.Height; row++) {
+            for (int col = 0; col < pixelMap.Width; col++) {
+                pixels[row, col] =  GetHUValue(pixelMap, row, col);
+            }
+        }
+
+        return pixels;
     }
 
     private double GetHUValue(IPixelData pixelMap, int iX, int iY) {

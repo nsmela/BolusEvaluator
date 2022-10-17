@@ -13,5 +13,6 @@ namespace BolusEvaluator.Services.ImageOverlayService {
 
         void SetImage(WriteableBitmap newBitmap);
         void AppendImage(WriteableBitmap newBitmap);
+        void ClearImage();
     }
 }

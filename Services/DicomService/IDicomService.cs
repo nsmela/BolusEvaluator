@@ -17,6 +17,8 @@ namespace BolusEvaluator.Services.DicomService {
         int CurrentFrame { get; }
         int FrameCount { get; }
 
+        string FrameText { get; }
+
         //methods
         void SetLowerWindowLevel(double level);
         void SetUpperWindowLevel(double level);
@@ -24,6 +26,7 @@ namespace BolusEvaluator.Services.DicomService {
         void SetFrame(int frameIndex);
         void LoadDataset(List<DicomDataset> datasets);
         double GetHU(Point point);
+        double[,] GetHUs();
 
         //events
         event Action OnDatasetLoaded, OnNewFrame, OnDicomImageUpdated;

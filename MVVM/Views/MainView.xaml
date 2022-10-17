@@ -19,6 +19,24 @@
     <mah:MetroWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </mah:MetroWindow.Resources>
+    
+    <mah:MetroWindow.Flyouts>
+        <mah:FlyoutsControl>
+            <mah:Flyout Header="DICOM Headers" IsOpen="{Binding DicomDumpFlyoutOpen}" Position="Right" Width="360">
+                <!-- Dicom File Information -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Column="1" Grid.Row="1" Grid.RowSpan="2">
+                    <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left">
+                        <mah:ProgressRing Foreground="{DynamicResource AccentColorBrush}"
+                  Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}, FallbackValue=Hidden}"            
+                  Margin="10" 
+                  Width="120" Height="120"/>
+                        <TextBlock Text="{Binding FileInfo}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </mah:Flyout>
+        </mah:FlyoutsControl>
+    </mah:MetroWindow.Flyouts>
+    
     <Grid Background="DimGray">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="auto" />
@@ -32,20 +50,13 @@
         </Grid.RowDefinitions>
 
         <!-- Tool bar -->
-        <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="2" Height="40" VerticalAlignment="Top" HorizontalAlignment="Stretch">
-            <views:ToolbarView />
-        </StackPanel>
+        <DockPanel Grid.Row="0" Grid.ColumnSpan="2" Height="40" VerticalAlignment="Top" HorizontalAlignment="Stretch">
+            <views:ToolbarView DockPanel.Dock="Left"/>
+            <Button Content="Show Headers" Command="{Binding ToggleDicomDumpFlyoutCommand}" MaxWidth="120" 
+                    Margin="4" DockPanel.Dock="Right" HorizontalAlignment="Right"/>
+        </DockPanel>
 
-        <!-- Load file and dicom dump -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Column="1" Grid.Row="1" Grid.RowSpan="2">
-            <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left">
-                <mah:ProgressRing Foreground="{DynamicResource AccentColorBrush}"
-                  Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}, FallbackValue=Hidden}"            
-                  Margin="10" 
-                  Width="120" Height="120"/>
-                <TextBlock Text="{Binding FileInfo}"/>
-            </StackPanel>
-        </ScrollViewer>
+
 
         <!-- Image View -->
         <views:ImageView Grid.Column="0" Grid.Row="1" Grid.RowSpan="2" MinWidth="600" MinHeight="600"/>
