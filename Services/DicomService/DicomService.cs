@@ -1,5 +1,6 @@
 ﻿using FellowOakDicom;
 using FellowOakDicom.Imaging;
+using FellowOakDicom.Imaging.Mathematics;
 using FellowOakDicom.Imaging.Render;
 using System;
 using System.Collections.Generic;
@@ -40,8 +41,12 @@ internal class DicomService : IDicomService {
         get {
             if (_data is null) return string.Empty;
 
-            //var patientDistance = _data[CurrentFrame].GetValue(DicomTag.PatientPosition);
-            return "Testing";
+            var patientPosition = _data[CurrentFrame].TryGetValues<double>(DicomTag.ImagePositionPatient, out var pos) ? pos : Array.Empty<double>();
+            if (patientPosition == Array.Empty<double>()){
+                return string.Empty;
+            } else {
+                return $"Position: {patientPosition[0].ToString("0.00")} {patientPosition[1].ToString("0.00")} {patientPosition[2].ToString("0.00")}";
+            }
         }
     }
 
