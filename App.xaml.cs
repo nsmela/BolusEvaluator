@@ -1,5 +1,7 @@
 ﻿using BolusEvaluator.MVVM.Views;
 using BolusEvaluator.Services.DicomService;
+using BolusEvaluator.Services.ImageOverlayService;
+using BolusEvaluator.Services.InputService;
 using FellowOakDicom;
 using FellowOakDicom.Imaging;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +17,8 @@ namespace BolusEvaluator;
             .ConfigureServices((hostContext, services) => {
                 services.AddSingleton<MainView>();
                 services.AddSingleton<IDicomService, DicomService>();
+                services.AddSingleton<IImageOverlayService, ImageOverlayService>();
+                services.AddSingleton<IInputService, InputService>();
             })
             .Build();
 
