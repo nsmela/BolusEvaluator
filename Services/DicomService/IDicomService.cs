@@ -1,4 +1,5 @@
-﻿using FellowOakDicom;
+﻿using BolusEvaluator.MVVM.Models;
+using FellowOakDicom;
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -6,6 +7,9 @@ using System.Windows.Media.Imaging;
 
 namespace BolusEvaluator.Services.DicomService {
     public interface IDicomService {
+        ImportedDicomDataset Data { get; }
+        ImportedDicomDataset Control { get; }
+
         bool IsBusy { get; set; }
         BitmapSource GetDicomImage { get; }
         double MaxWindowLevel { get; }
@@ -25,10 +29,11 @@ namespace BolusEvaluator.Services.DicomService {
         void SetWindowLevel(double lowerLevel, double upperLevel);
         void SetFrame(int frameIndex);
         void LoadDataset(List<DicomDataset> datasets);
+        void LoadControlDataset(List<DicomDataset> datasets);
         double GetHU(Point point);
         double[,] GetHUs();
 
         //events
-        event Action OnDatasetLoaded, OnNewFrame, OnDicomImageUpdated;
+        event Action OnDatasetLoaded, OnNewFrame, OnDicomImageUpdated, OnControlLoaded;
     }
 }

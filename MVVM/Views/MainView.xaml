@@ -34,6 +34,10 @@
                     </StackPanel>
                 </ScrollViewer>
             </mah:Flyout>
+            <mah:Flyout Header="Control Image" IsOpen="{Binding ControlImageFlyoutOpen}" Position="Right" Width="640">
+                <!-- Dicom File Information -->
+                <views:ControlImageView />
+            </mah:Flyout>
         </mah:FlyoutsControl>
     </mah:MetroWindow.Flyouts>
     
@@ -53,6 +57,8 @@
         <DockPanel Grid.Row="0" Grid.ColumnSpan="2" Height="40" VerticalAlignment="Top" HorizontalAlignment="Stretch">
             <views:ToolbarView DockPanel.Dock="Left"/>
             <Button Content="Show Headers" Command="{Binding ToggleDicomDumpFlyoutCommand}" MaxWidth="120" 
+                    Margin="4" DockPanel.Dock="Right" HorizontalAlignment="Right"/>
+            <Button Content="Control Images" Command="{Binding ToggleControlFlyoutCommand}" MaxWidth="120" 
                     Margin="4" DockPanel.Dock="Right" HorizontalAlignment="Right"/>
         </DockPanel>
 

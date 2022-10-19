@@ -19,7 +19,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="MVVM\Models\" />
     <Folder Include="Tools\ToolStates\" />
   </ItemGroup>
 

@@ -23,7 +23,7 @@ public class ImageDisplayActionMessage : ValueChangedMessage<Action<ImageViewMod
 public partial class MainViewModel {
     [ObservableProperty] private bool _isBusy; //IsBusy observable property
     [ObservableProperty] private bool _isNotBusy;
-    [ObservableProperty] private bool _dicomDumpFlyoutOpen;
+    [ObservableProperty] private bool _dicomDumpFlyoutOpen, _controlImageFlyoutOpen;
     [ObservableProperty] private bool _isHeadersRead;
     [ObservableProperty] private string? _fileInfo;
 
@@ -49,6 +49,7 @@ public partial class MainViewModel {
 
         IsBusy = false;
         DicomDumpFlyoutOpen = false;
+        ControlImageFlyoutOpen = false;
         IsHeadersRead = false;
     }
 
@@ -60,6 +61,16 @@ public partial class MainViewModel {
         }
 
         DicomDumpFlyoutOpen = !DicomDumpFlyoutOpen;
+    }
+
+    [RelayCommand]
+    public void ToggleControlFlyout() {
+        if (FileInfo == String.Empty) {
+            ControlImageFlyoutOpen = false;
+            return;
+        }
+
+        ControlImageFlyoutOpen = !ControlImageFlyoutOpen;
     }
 }
 
