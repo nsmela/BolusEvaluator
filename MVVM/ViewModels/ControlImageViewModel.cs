@@ -18,7 +18,7 @@ namespace BolusEvaluator.MVVM.ViewModels;
 [ObservableObject]
 public partial class ControlImageViewModel {
     private readonly IDicomService _dicom;
-    private ImportedDicomDataset _data => _dicom.Data;
+    private ImportedDicomDataset _data => _dicom.Control;
 
     [ObservableProperty] private Color _controlColor;
 
@@ -30,6 +30,7 @@ public partial class ControlImageViewModel {
     [ObservableProperty] private string _layerText;
 
     //window levels slider
+    [ObservableProperty] private bool _showWindowSlider = false;
     [ObservableProperty] private double? _maxWindowValue = 40;
     [ObservableProperty] private double? _minWindowValue = -40;
     [ObservableProperty] private double? _lowerWindowValue;
@@ -38,6 +39,7 @@ public partial class ControlImageViewModel {
     partial void OnLowerWindowValueChanged(double? value) => SetLowerWindowLevel(value);
 
     //current frame slider
+    [ObservableProperty] private bool _showFramesSlider = false;
     [ObservableProperty] private int _currentFrame;
     [ObservableProperty] private int _maxFrames;
 
@@ -72,6 +74,10 @@ public partial class ControlImageViewModel {
 
             _data.OnNewFrame += NewFrame;
             _data.OnDicomImageUpdated += ImageUpdated;
+
+            ShowFramesSlider = _data.FrameCount > 1;
+            ShowWindowSlider = true;
+            _data.Refresh();
 
         } catch (OperationCanceledException e) {
             MessageBox.Show("Load Control Dicom File failed: " + e.Message);

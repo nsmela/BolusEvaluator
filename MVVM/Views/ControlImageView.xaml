@@ -6,14 +6,21 @@
              xmlns:local="clr-namespace:BolusEvaluator.MVVM.Views"
              mc:Ignorable="d" 
              xmlns:viewmodels="clr-namespace:BolusEvaluator.MVVM.ViewModels" 
-             xmlns:controls="clr-namespace:BolusEvaluator.Controls"
+             xmlns:controls="clr-namespace:BolusEvaluator.Controls" xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
              d:DataContext="{d:DesignInstance Type=viewmodels:ControlImageViewModel}"
              d:DesignHeight="800" d:DesignWidth="640">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="b2vconv"/>
+    </UserControl.Resources>
     <Grid>
         <StackPanel Orientation="Vertical" Margin="2">
             <Button Content="Load Dataset" Margin="4" MaxWidth="240" Command="{Binding LoadDicomFileCommand}"/>
             <StackPanel Orientation="Horizontal" Margin="2">
-            <Slider Orientation="Vertical" Width="40"/>
+                <Slider Orientation="Vertical" Width="40" Visibility="{Binding ShowFramesSlider, Converter={StaticResource b2vconv}}" Margin="4,4,0,4"
+                        Minimum="0" Maximum="{Binding MaxFrames}"
+                        Value="{Binding CurrentFrame}" mah:SliderHelper.ChangeValueBy="LargeChange"
+                        AutoToolTipPlacement="TopLeft"
+                        TickPlacement="Both" />
                 <Border x:Name="ParentBorder" BorderBrush="Black" BorderThickness="3"  Background="White" Margin="6" ClipToBounds="True">
 
                     <Canvas Grid.Column="0"  Grid.Row="0"
@@ -38,8 +45,18 @@
                         <TextBlock Text="{Binding LayerText}" Foreground="AliceBlue"/>
                     </Canvas>
                 </Border>
-                <Slider Orientation="Vertical" Width="40"/>
-        </StackPanel>
+                <mah:RangeSlider Width="60" Height="500" Margin="10"
+                        Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        ExtendedMode="True"
+                        Minimum="{Binding MinWindowValue}"
+                        Maximum="{Binding MaxWindowValue}"                       
+                        MinRangeWidth="20"
+                        LowerValue="{Binding LowerWindowValue}"
+                        UpperValue="{Binding UpperWindowValue}"
+                        AutoToolTipPlacement="BottomRight"
+                        AutoToolTipLowerValueTemplate="{Binding LowerWindowValue}" 
+                        />
+            </StackPanel>
         </StackPanel>
     </Grid>
 </UserControl>

@@ -70,7 +70,7 @@ public partial class ImageViewModel {
     private void NewFrame() {
         //frame slider
         CurrentFrame = _dicom.CurrentFrame;
-        MaxFrames = _dicom.FrameCount;
+        MaxFrames = _dicom.FrameCount - 1;
 
         //window level slider
         MinWindowValue = _dicom.MinWindowLevel;
