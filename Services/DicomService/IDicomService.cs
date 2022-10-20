@@ -34,6 +34,7 @@ namespace BolusEvaluator.Services.DicomService {
         double[,] GetHUs();
 
         //events
-        event Action OnDatasetLoaded, OnNewFrame, OnDicomImageUpdated, OnControlLoaded;
+        event Action OnDatasetLoaded, OnNewFrame, OnDicomImageUpdated;
+        event Action OnControlLoaded, OnNewControlFrame, OnControlImageUpdated;
     }
 }

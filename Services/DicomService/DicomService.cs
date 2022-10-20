@@ -33,10 +33,9 @@ internal class DicomService : IDicomService {
 
     public bool IsBusy {get => _data.IsBusy; set => _data.IsBusy = value; }
 
-    public event Action OnDatasetLoaded;
-    public event Action OnNewFrame;
-    public event Action OnDicomImageUpdated;
-    public event Action OnControlLoaded;
+    public event Action OnDatasetLoaded, OnControlLoaded;
+    public event Action OnNewFrame, OnNewControlFrame;
+    public event Action OnDicomImageUpdated, OnControlImageUpdated;
 
     public double GetHU(Point point) {
         throw new NotImplementedException();
