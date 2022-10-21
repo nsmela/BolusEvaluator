@@ -20,7 +20,8 @@
                         Minimum="0" Maximum="{Binding MaxFrames}"
                         Value="{Binding CurrentFrame}" mah:SliderHelper.ChangeValueBy="LargeChange"
                         AutoToolTipPlacement="TopLeft"
-                        TickPlacement="Both" />
+                        TickPlacement="Both" 
+                        mah:SliderHelper.TrackValueFillBrush="#FF9D9D9D" mah:SliderHelper.TrackValueFillDisabledBrush="#FF9D9D9D" mah:SliderHelper.TrackValueFillHoverBrush="#FF9D9D9D" mah:SliderHelper.TrackValueFillPressedBrush="#FF9D9D9D" />
                 <Border x:Name="ParentBorder" BorderBrush="Black" BorderThickness="3"  Background="White" Margin="6" ClipToBounds="True">
 
                     <Canvas Grid.Column="0"  Grid.Row="0"

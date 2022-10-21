@@ -30,8 +30,6 @@ namespace BolusEvaluator.Services.DicomService {
         void SetFrame(int frameIndex);
         void LoadDataset(List<DicomDataset> datasets);
         void LoadControlDataset(List<DicomDataset> datasets);
-        double GetHU(Point point);
-        double[,] GetHUs();
 
         //events
         event Action OnDatasetLoaded, OnNewFrame, OnDicomImageUpdated;

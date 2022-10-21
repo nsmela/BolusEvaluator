@@ -1,4 +1,5 @@
-﻿using BolusEvaluator.MVVM.ViewModels;
+﻿using BolusEvaluator.Services.InputService;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using System.Windows;
@@ -14,6 +15,8 @@ public class ZoomBorder : Border {
 
     private double scaleMax = 3.0;
     private double transformMax = 128;
+
+    private IInputService input;
 
     private TranslateTransform GetTranslateTransform(UIElement element) {
         return (TranslateTransform)((TransformGroup)element.RenderTransform)
@@ -47,9 +50,11 @@ public class ZoomBorder : Border {
             this.MouseWheel += child_MouseWheel;
             this.MouseRightButtonDown += child_MouseRightButtonDown;
             this.MouseRightButtonUp += child_MouseRightButtonUp;
-            this.MouseLeftButtonDown += child_MouseLeftButtonDown;
-            this.MouseLeftButtonUp +=  child_MouseLeftButtonUp;
             this.MouseMove += child_MouseMove;
+            this.MouseLeftButtonDown += child_MouseLeftButtonDown;
+            this.MouseLeftButtonUp += child_MouseLeftButtonUp;
+
+            input = App.AppHost.Services.GetService<IInputService>();
         }
     }
 
@@ -103,26 +108,22 @@ public class ZoomBorder : Border {
         }
     }
 
+    private void child_MouseRightButtonUp(object sender, MouseButtonEventArgs e) {
+        if (child != null) {
+            child.ReleaseMouseCapture();
+            this.Cursor = Cursors.Arrow;
+        }
+    }
+
     private void child_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
         if (child != null) {
-            var point = GetImageCoordsAt(e);
-            var viewModel = ((ImageViewModel)base.DataContext);
-            viewModel.OnLeftMouseDown(point);
+            input.Image_LeftMouseDown(GetImageCoordsAt(e));
         }
     }
 
     private void child_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
         if (child != null) {
-            var point = GetImageCoordsAt(e);
-            var viewModel = ((ImageViewModel)base.DataContext);
-            viewModel.OnLeftMouseUp(point);
-        }
-    }
-
-    private void child_MouseRightButtonUp(object sender, MouseButtonEventArgs e) {
-        if (child != null) {
-            child.ReleaseMouseCapture();
-            this.Cursor = Cursors.Arrow;
+            input.Image_LeftMouseUp(GetImageCoordsAt(e));
         }
     }
 
@@ -134,9 +135,7 @@ public class ZoomBorder : Border {
                 tt.X = origin.X - v.X;
                 tt.Y = origin.Y - v.Y;
             } else {
-                var point = GetImageCoordsAt(e);
-                var viewModel = ((ImageViewModel)base.DataContext);
-                viewModel.OnMouseMove(point);
+                input.Image_MouseMove(GetImageCoordsAt(e));
             }
         }
     }

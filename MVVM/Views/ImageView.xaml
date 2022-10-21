@@ -9,11 +9,11 @@
              xmlns:viewmodels="clr-namespace:BolusEvaluator.MVVM.ViewModels" xmlns:local1="http://schemas.microsoft.com/netfx/2009/xaml/presentation"
              d:DataContext="{d:DesignInstance Type=viewmodels:ImageViewModel}"
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="600">
+             d:DesignHeight="640" d:DesignWidth="620">
     <UserControl.Resources>
         <local1:BooleanToVisibilityConverter x:Key="b2vconv"/>
     </UserControl.Resources>
-    <Grid Background="DimGray" Margin="4" >
+    <Grid Background="Transparent" Margin="4" >
         <Border BorderBrush="Black" BorderThickness="3" CornerRadius="8">
             <Grid >
                 <Grid.ColumnDefinitions>
@@ -21,13 +21,22 @@
                     <ColumnDefinition />
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="42" />
                     <RowDefinition Height="auto" />
                     <RowDefinition />
                 </Grid.RowDefinitions>
 
-                <Border x:Name="ParentBorder" BorderBrush="Black" BorderThickness="3"  Background="White" Margin="6" ClipToBounds="True">
+                <!-- Toolbar -->
+                <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="0" Orientation="Horizontal">
+                    <Button Content="HU Value"  Margin="4"/>
+                    <Button Content="Fill Pixels" Margin="4"/>
+                </StackPanel>
+
+                <Border x:Name="ParentBorder" BorderBrush="Black" 
+                        BorderThickness="3"  Background="White" Margin="6" ClipToBounds="True" 
+                        Grid.Column="0"  Grid.Row="1">
                     
-                    <Canvas Grid.Column="0"  Grid.Row="0"
+                    <Canvas 
                     Height="512" Width="512"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
@@ -50,7 +59,8 @@
                     </Canvas>
                 </Border>
 
-                <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Vertical" >
+
+                <StackPanel Grid.Column="1" Grid.Row="1" Orientation="Vertical" >
                     <mah:RangeSlider Width="60" Height="500" Margin="10"
                         Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
                         ExtendedMode="True"
@@ -64,13 +74,16 @@
                         />
                 </StackPanel>
 
-                <Slider Grid.Row="1" Grid.Column="0" Margin="8" VerticalAlignment="Top" Height="42"
+                <Slider Grid.Row="2" Grid.Column="0" Margin="8" VerticalAlignment="Top" Height="42"
+                        Visibility="{Binding ShowFrameSlider, Converter={StaticResource b2vconv}}"
                         Minimum="0" Maximum="{Binding MaxFrames}"
                         Value="{Binding CurrentFrame}" mah:SliderHelper.ChangeValueBy="LargeChange"
                         AutoToolTipPlacement="TopLeft"
-                        TickPlacement="Both" mah:SliderHelper.TrackValueFillBrush="#FF9D9D9D" mah:SliderHelper.TrackValueFillDisabledBrush="#FF9D9D9D" mah:SliderHelper.TrackValueFillHoverBrush="#FF9D9D9D" mah:SliderHelper.TrackValueFillPressedBrush="#FF9D9D9D" />
-                <StackPanel Grid.Column="1" Grid.Row="1">
-                    <TextBlock Text="{Binding InfoText}" />
+                        TickPlacement="Both" 
+                        mah:SliderHelper.TrackValueFillBrush="#FF9D9D9D" mah:SliderHelper.TrackValueFillDisabledBrush="#FF9D9D9D" 
+                        mah:SliderHelper.TrackValueFillHoverBrush="#FF9D9D9D" mah:SliderHelper.TrackValueFillPressedBrush="#FF9D9D9D" />
+                <StackPanel Grid.Column="1" Grid.Row="2">
+                    <TextBlock Text="{Binding InfoText}" FontSize="10"/>
                 </StackPanel>
             </Grid>
         </Border>

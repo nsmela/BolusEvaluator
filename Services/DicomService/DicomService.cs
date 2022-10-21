@@ -37,14 +37,6 @@ internal class DicomService : IDicomService {
     public event Action OnNewFrame, OnNewControlFrame;
     public event Action OnDicomImageUpdated, OnControlImageUpdated;
 
-    public double GetHU(Point point) {
-        throw new NotImplementedException();
-    }
-
-    public double[,] GetHUs() {
-        throw new NotImplementedException();
-    }
-
     public void LoadDataset(List<DicomDataset> data) {
         _data = new ImportedDicomDataset(data);
         _data.OnDatasetLoaded += OnDatasetLoaded;

@@ -15,6 +15,7 @@ public class ImageOverlayService : IImageOverlayService {
             OverlayImage.SetPixel(x, y, color);
             return Colors.White;
         });
+        OnImageUpdated?.Invoke();
     }
 
     public void SetImage(WriteableBitmap newBitmap) {
