@@ -18,6 +18,7 @@ public class ImportedDicomDataset {
     private double _rescaleIntercept;
     private int _imageWidth;
     private int _imageHeight;
+    private double _areaPerPixel;
 
     private bool _isBusy = false;
     public bool IsBusy { get => _isBusy; set => _isBusy = value; }
@@ -78,6 +79,11 @@ public class ImportedDicomDataset {
             _imageWidth = _data[0].GetSingleValue<int>(DicomTag.Columns);
             _imageHeight = _data[0].GetSingleValue<int>(DicomTag.Rows);
 
+            //area for each pixel
+            var pixelSpacing = _data[0].TryGetValues<double>(DicomTag.PixelSpacing, out var pos) ? pos : Array.Empty<double>();
+            if (pixelSpacing != Array.Empty<double>()) _areaPerPixel = pixelSpacing[0] * pixelSpacing[1];
+            
+
         } catch (Exception e) {
             System.Windows.MessageBox.Show("Imported Dicom Error: " + e.Message + "\r\n" + e.InnerException);
         }
@@ -122,6 +128,8 @@ public class ImportedDicomDataset {
         OnDatasetLoaded?.Invoke();
         UpdateFrame();
     }
+
+    public double AreaPerPixel => _areaPerPixel;
     #endregion
 
     #region private methods

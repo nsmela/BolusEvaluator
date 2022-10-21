@@ -217,6 +217,11 @@ class MouseFill : IMouseTool {
             bitmap.SetPixel((int)point.X, (int)point.Y, Colors.Blue);
         });
         _image.SetImage(bitmap);
+
+        //calculate area
+        var areaPerPixel = _dicom.Data.AreaPerPixel;
+        var selectedArea = _points.Count * areaPerPixel;
+        WeakReferenceMessenger.Default.Send<DicomDetailsMessage>(new DicomDetailsMessage($"Info\r\n\r\nSelected Area: {selectedArea.ToString("0.00")}"));
     }
 
     private void GetSurroundingPoints(int pX, int pY) {
