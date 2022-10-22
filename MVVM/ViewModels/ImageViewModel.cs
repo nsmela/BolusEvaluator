@@ -53,8 +53,9 @@ public partial class ImageViewModel {
 
     //frame data
     [ObservableProperty] private int _imageWidth = 512, _imageHeight = 512; //image pixel sizes
-
     [ObservableProperty] private bool _showFrameSlider = false;
+    private Dictionary<int, WriteableBitmap> _filledImages; //frames and their bitmaps
+    private Dictionary<int, double> _volumes; //frames and their volumes
 
     //mouse inputs
     private IMouseTool _mouseTool;
@@ -197,6 +198,10 @@ class MouseFill : IMouseTool {
 
     public void OnMouseUp(Point point) {
         
+    }
+
+    private void NewFrame() {
+        int frameNumber = _dicom.CurrentFrame;
     }
 
     private void GetFillPoints(Point point, double pointValue) {
