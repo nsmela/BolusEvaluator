@@ -2,6 +2,7 @@
 using FellowOakDicom;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
@@ -30,6 +31,7 @@ namespace BolusEvaluator.Services.DicomService {
         void SetFrame(int frameIndex);
         void LoadDataset(List<DicomDataset> datasets);
         void LoadControlDataset(List<DicomDataset> datasets);
+        Task LoadDicomSet(List<DicomDataset> data);
 
         //events
         event Action OnDatasetLoaded, OnNewFrame, OnDicomImageUpdated;

@@ -5,6 +5,7 @@ using FellowOakDicom.Imaging.Mathematics;
 using FellowOakDicom.Imaging.Render;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -12,6 +13,7 @@ using System.Windows.Media.Imaging;
 namespace BolusEvaluator.Services.DicomService;
 internal class DicomService : IDicomService {
     private ImportedDicomDataset _data, _control;
+    private DicomSet _dicomSet;
     public ImportedDicomDataset Data => _data;
     public ImportedDicomDataset Control => _control;
 
@@ -50,6 +52,11 @@ internal class DicomService : IDicomService {
         OnControlLoaded?.Invoke();
     }
 
+    public async Task LoadDicomSet(List<DicomDataset> data) {
+        await Task.Run(() => {
+            _dicomSet = new DicomSet(data);
+        });
+    }
 
     public void SetFrame(int frameIndex) => _data.SetFrame(frameIndex);
 

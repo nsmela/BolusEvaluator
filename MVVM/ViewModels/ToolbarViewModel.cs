@@ -74,6 +74,7 @@ public partial class ToolbarViewModel {
             //dump DICOM tags
             WeakReferenceMessenger.Default.Send(new DicomHeadersMessage( await GetAllTags(file)));
 
+            await _dicom.LoadDicomSet(dataset);
         } catch (OperationCanceledException e) {
             MessageBox.Show("Load Dicom File failed: " + e.Message);
         }
