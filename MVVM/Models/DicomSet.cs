@@ -14,8 +14,12 @@ public class DicomSet {
 
     //details
     int _imageWidth, _imageHeight;
+    public int ImageWidth => _imageWidth;
+    public int ImageHeight => _imageHeight;
     double _pixelWidth, _pixelHeight, _pixelArea, _pixelVolume;
+    public double PixelVolume => _pixelVolume;
     double _sliceThickness;
+    public double SliceThickness => _sliceThickness;
     double _rescaleSlope, _rescaleIntercept;
 
     public BitmapSource GetDicomImage(int slice, double lowerWindow, double upperWindow) {
@@ -62,8 +66,10 @@ public class DicomSet {
 
 public class Slice {
     public DicomDataset Data { get; private set; }
-    public Vector3 Position { get; set; }
-    public IPixelData PixelMap { get; set; }
+    public Vector3 Position { get; private set; }
+    public IPixelData PixelMap { get; private set; }
+    public double MaxValue { get; private set; }
+    public double MinValue { get; private set; }
 
     public Slice(DicomDataset data) {
         Data = data;
@@ -72,10 +78,28 @@ public class Slice {
 
         var header = DicomPixelData.Create(Data);
         PixelMap = (PixelDataFactory.Create(header, 0));
+
+        var dicomRanges = PixelMap.GetMinMax();
+        MinValue = dicomRanges.Minimum;
+        MaxValue = dicomRanges.Maximum;
     }
 
     public WriteableBitmap GetWindowedImage(double lowerWindow, double upperWindow) {
 
         return new DicomImage(Data).RenderImage().AsWriteableBitmap();
+    }
+
+    public string FrameText {
+        get {
+            if (Data is null) return string.Empty;
+
+            var patientPosition = Data.TryGetValues<double>(DicomTag.ImagePositionPatient, out var pos) ? pos : Array.Empty<double>();
+            if (patientPosition == Array.Empty<double>()) {
+                return string.Empty;
+            }
+            else {
+                return $"Position: {patientPosition[0].ToString("0.00")} {patientPosition[1].ToString("0.00")} {patientPosition[2].ToString("0.00")}";
+            }
+        }
     }
 }
