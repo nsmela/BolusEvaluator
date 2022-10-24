@@ -3,14 +3,46 @@ using FellowOakDicom.Imaging;
 using FellowOakDicom.Imaging.Render;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
 
 namespace BolusEvaluator.MVVM.Models;
-public class DicomSet {
+public class DicomSet  {
     string _filename;
+
+    public event Action OnNewFrame, OnImageUpdated;
     List<Slice> _slices;
+
+    private int _currentFrame;    
+    public int FrameCount => _slices.Count;
+    public Slice CurrentSlice => _slices[CurrentFrame];
+
+    public int CurrentFrame {
+        get => _currentFrame;
+        set {
+            _currentFrame = value;
+            OnNewFrame?.Invoke();
+            OnImageUpdated?.Invoke();
+        }
+    }
+
+    //window levels
+    private double _lowerWindowValue, _upperWindowValue;
+    public double LowerWindowValue { 
+        get => _lowerWindowValue;
+        set {
+            _lowerWindowValue = value;
+            OnImageUpdated?.Invoke();
+        }
+    }
+    public double UpperWindowValue {
+        get => _upperWindowValue;
+        set {
+            _upperWindowValue = value;
+            OnImageUpdated?.Invoke();
+        }
+    }
 
     //details
     int _imageWidth, _imageHeight;
@@ -20,7 +52,12 @@ public class DicomSet {
     public double PixelVolume => _pixelVolume;
     double _sliceThickness;
     public double SliceThickness => _sliceThickness;
-    double _rescaleSlope, _rescaleIntercept;
+
+    
+    public double MaxHUValue(int slice) => _slices[slice].MaxValue;
+    public double MinHUValue(int slice) => _slices[slice].MinValue;
+
+    public Point3D FramePosition(int slice) => _slices[slice].Position;
 
     public BitmapSource GetDicomImage(int slice, double lowerWindow, double upperWindow) {
         if (_slices is null || _slices.Count < 1) return null;
@@ -40,13 +77,17 @@ public class DicomSet {
         });
 
         try {
-            _rescaleSlope = data[0].GetSingleValue<double>(DicomTag.RescaleSlope);
-            _rescaleIntercept = data[0].GetSingleValue<double>(DicomTag.RescaleIntercept);
 
             _imageWidth = data[0].GetSingleValue<int>(DicomTag.Columns);
             _imageHeight = data[0].GetSingleValue<int>(DicomTag.Rows);
 
             _sliceThickness = data[0].GetSingleValue<double>(DicomTag.SliceThickness);
+
+            var range = data[0].GetValue<double>(DicomTag.WindowWidth, 0) / 2;
+            var center = data[0].GetValue<double>(DicomTag.WindowCenter, 0);
+
+            _lowerWindowValue = center - range;
+            _upperWindowValue = center + range;
 
             //area for each pixel
             var pixelSpacing = data[0].TryGetValues<double>(DicomTag.PixelSpacing, out var pos) ? pos : Array.Empty<double>();
@@ -62,19 +103,26 @@ public class DicomSet {
             System.Windows.MessageBox.Show("DicomSet Error: " + e.Message + "\r\n" + e.InnerException);
         }
     }
+
+
 }
 
 public class Slice {
+    private double _rescaleSlope, _rescaleIntercept;
+
     public DicomDataset Data { get; private set; }
-    public Vector3 Position { get; private set; }
+    public DicomImage Image { get; private set; }
+    public Point3D Position { get; private set; }
     public IPixelData PixelMap { get; private set; }
     public double MaxValue { get; private set; }
     public double MinValue { get; private set; }
 
     public Slice(DicomDataset data) {
         Data = data;
+        Image = new DicomImage(Data);
+
         var position = Data.TryGetValues<double>(DicomTag.ImagePositionPatient, out var pos) ? pos : Array.Empty<double>();
-        Position = new Vector3((float)position[0], (float)position[1], (float)position[2]);
+        Position = new Point3D((float)position[0], (float)position[1], (float)position[2]);
 
         var header = DicomPixelData.Create(Data);
         PixelMap = (PixelDataFactory.Create(header, 0));
@@ -82,11 +130,15 @@ public class Slice {
         var dicomRanges = PixelMap.GetMinMax();
         MinValue = dicomRanges.Minimum;
         MaxValue = dicomRanges.Maximum;
+
+        _rescaleSlope = Data.GetSingleValue<double>(DicomTag.RescaleSlope);
+        _rescaleIntercept = Data.GetSingleValue<double>(DicomTag.RescaleIntercept);
     }
 
     public WriteableBitmap GetWindowedImage(double lowerWindow, double upperWindow) {
-
-        return new DicomImage(Data).RenderImage().AsWriteableBitmap();
+        Image.WindowWidth = (upperWindow - lowerWindow);
+        Image.WindowCenter = (upperWindow- Image.WindowWidth / 2);
+        return Image.RenderImage().AsWriteableBitmap();
     }
 
     public string FrameText {
@@ -102,4 +154,39 @@ public class Slice {
             }
         }
     }
+
+    #region Pixel values
+    //https://stackoverflow.com/questions/22991009/how-to-get-hounsfield-units-in-dicom-file-using-fellow-oak-dicom-library-in-c-sh
+    //https://www.sciencedirect.com/topics/medicine-and-dentistry/hounsfield-scale
+    //Hounsfield units = (Rescale Slope * Pixel Value) + Rescale Intercept
+    public double GetHU(Point point) {
+        return GetHUValue(PixelMap, (int)point.X, (int)point.Y);
+    }
+
+    public double[,] GetHUs() {
+        var pixelMap = PixelMap;
+        double[,] pixels = new double[pixelMap.Height, pixelMap.Width];
+        for (int row = 0; row < pixelMap.Height; row++) {
+            for (int col = 0; col < pixelMap.Width; col++) {
+                pixels[row, col] = GetHUValue(pixelMap, row, col);
+            }
+        }
+
+        return pixels;
+    }
+
+    private double GetHUValue(IPixelData pixelMap, int iX, int iY) {
+        if (pixelMap is null) return -2000;
+
+        int index = (int)(iX + pixelMap.Width * iY);
+        switch (pixelMap) {
+            case GrayscalePixelDataU16:
+                return ((GrayscalePixelDataU16)pixelMap).Data[index] * _rescaleSlope + _rescaleIntercept;
+            case GrayscalePixelDataS16:
+                return ((GrayscalePixelDataS16)pixelMap).Data[index] * _rescaleSlope + _rescaleIntercept;
+            default:
+                return 0.0f;
+        }
+    }
+    #endregion
 }

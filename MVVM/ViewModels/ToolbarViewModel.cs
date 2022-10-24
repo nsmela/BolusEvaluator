@@ -69,7 +69,7 @@ public partial class ToolbarViewModel {
             //generating an image
             var file = await DicomFile.OpenAsync(openFile.FileName);
             var dataset = await GetData(openFile);
-            _dicom.LoadDataset(dataset);
+            await _dicom.LoadDicomSet(dataset);
 
             //dump DICOM tags
             WeakReferenceMessenger.Default.Send(new DicomHeadersMessage( await GetAllTags(file)));
@@ -135,17 +135,17 @@ public class HighlightWindowTool : IImageTools {
     }
 
     public void OnBegin() {
-        _dicomService.Control.OnDicomImageUpdated += OnWindowLevelChanged;
+        _dicomService.Control.OnImageUpdated += OnWindowLevelChanged;
         OnWindowLevelChanged();
     }
 
     public void OnEnd() {
-        _dicomService.Control.OnDicomImageUpdated -= OnWindowLevelChanged;
+        _dicomService.Control.OnImageUpdated -= OnWindowLevelChanged;
         _imageService.ClearImage();
     }
 
     private void OnWindowLevelChanged() {
-        var pixels  = _dicomService.Control.GetHUs(); //double[row, column] or double[height, width]
+        var pixels  = _dicomService.Control.CurrentSlice.GetHUs(); //double[row, column] or double[height, width]
         if (pixels is null) return;
 
         int height = pixels.GetLength(0);

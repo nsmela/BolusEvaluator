@@ -8,33 +8,16 @@ using System.Windows.Media.Imaging;
 
 namespace BolusEvaluator.Services.DicomService {
     public interface IDicomService {
-        ImportedDicomDataset Data { get; }
-        ImportedDicomDataset Control { get; }
+        DicomSet Data { get; }
+        DicomSet Control { get; }
 
         bool IsBusy { get; set; }
-        BitmapSource GetDicomImage { get; }
-        double MaxWindowLevel { get; }
-        double MinWindowLevel { get; }
-
-        double LowerWindowValue { get; }
-        double UpperWindowValue { get; }
-
-        int CurrentFrame { get; }
-        int FrameCount { get; }
-
-        string FrameText { get; }
 
         //methods
-        void SetLowerWindowLevel(double level);
-        void SetUpperWindowLevel(double level);
-        void SetWindowLevel(double lowerLevel, double upperLevel);
-        void SetFrame(int frameIndex);
-        void LoadDataset(List<DicomDataset> datasets);
-        void LoadControlDataset(List<DicomDataset> datasets);
+        Task LoadControlDicomSet(List<DicomDataset> data);
         Task LoadDicomSet(List<DicomDataset> data);
 
         //events
-        event Action OnDatasetLoaded, OnNewFrame, OnDicomImageUpdated;
-        event Action OnControlLoaded, OnNewControlFrame, OnControlImageUpdated;
+        event Action OnDatasetLoaded, OnControlLoaded;
     }
 }

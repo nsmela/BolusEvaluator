@@ -18,7 +18,7 @@ namespace BolusEvaluator.MVVM.ViewModels;
 [ObservableObject]
 public partial class ControlImageViewModel {
     private readonly IDicomService _dicom;
-    private ImportedDicomDataset _data => _dicom.Control;
+    private DicomSet _data => _dicom.Control;
 
     [ObservableProperty] private Color _controlColor;
 
@@ -31,12 +31,12 @@ public partial class ControlImageViewModel {
 
     //window levels slider
     [ObservableProperty] private bool _showWindowSlider = false;
-    [ObservableProperty] private double? _maxWindowValue = 40;
-    [ObservableProperty] private double? _minWindowValue = -40;
-    [ObservableProperty] private double? _lowerWindowValue;
-    [ObservableProperty] private double? _upperWindowValue;
-    partial void OnUpperWindowValueChanged(double? value) => SetUpperWindowLevel(value);
-    partial void OnLowerWindowValueChanged(double? value) => SetLowerWindowLevel(value);
+    [ObservableProperty] private double _maxWindowValue = 40;
+    [ObservableProperty] private double _minWindowValue = -40;
+    [ObservableProperty] private double _lowerWindowValue;
+    [ObservableProperty] private double _upperWindowValue;
+    partial void OnUpperWindowValueChanged(double value) => SetUpperWindowLevel(value);
+    partial void OnLowerWindowValueChanged(double value) => SetLowerWindowLevel(value);
 
     //current frame slider
     [ObservableProperty] private bool _showFramesSlider = false;
@@ -70,14 +70,14 @@ public partial class ControlImageViewModel {
             //generating an image
             var file = await DicomFile.OpenAsync(openFile.FileName);
             var dataset = await GetData(openFile);
-            _dicom.LoadControlDataset(dataset);
+            _dicom.LoadControlDicomSet(dataset);
 
-            _data.OnNewFrame += NewFrame;
-            _data.OnDicomImageUpdated += ImageUpdated;
+            _dicom.Control.OnNewFrame += NewFrame;
+            _dicom.Control.OnImageUpdated += ImageUpdated;
 
             ShowFramesSlider = _data.FrameCount > 1;
             ShowWindowSlider = true;
-            _data.Refresh();
+            
 
         } catch (OperationCanceledException e) {
             MessageBox.Show("Load Control Dicom File failed: " + e.Message);
@@ -92,19 +92,19 @@ public partial class ControlImageViewModel {
     private void SetUpperWindowLevel(double? value) {
         if (_data is null) return;
 
-        _data.SetUpperWindowLevel((double)value);
+        _dicom.Control.UpperWindowValue = (double)value;
     }
 
     private void SetLowerWindowLevel(double? value) {
         if (_data is null) return;
 
-        _data.SetLowerWindowLevel((double)value);
+        _dicom.Control.LowerWindowValue = (double)value;
     }
 
     private void SetFrame(int value) {
         if (_data is null) return;
 
-        _data.SetFrame(value);
+        
     }
 
     private void NewFrame() {
@@ -113,11 +113,11 @@ public partial class ControlImageViewModel {
         MaxFrames = _data.FrameCount;
 
         //window level slider
-        MinWindowValue = _data.MinWindowLevel;
-        MaxWindowValue = _data.MaxWindowLevel;
+        MinWindowValue = _data.CurrentSlice.MinValue;
+        MaxWindowValue = _data.CurrentSlice.MaxValue;
 
         //text
-        LayerText = _data.FrameText;
+        LayerText = _data.CurrentSlice.FrameText;
     }
 
     private void ImageUpdated() {
@@ -125,7 +125,7 @@ public partial class ControlImageViewModel {
         LowerWindowValue = _data.LowerWindowValue;
         UpperWindowValue = _data.UpperWindowValue;
 
-        DisplayImage = _data.GetDicomImage;
+        DisplayImage = _data.CurrentSlice.GetWindowedImage(LowerWindowValue, UpperWindowValue);
     }
 
     private async Task<List<DicomDataset>> GetData(OpenFileDialog fileDialog) {

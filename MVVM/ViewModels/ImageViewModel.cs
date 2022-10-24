@@ -31,18 +31,19 @@ public partial class ImageViewModel {
     [ObservableProperty] private string _layerText;
 
     //window levels slider
-    [ObservableProperty] private double? _maxWindowValue = 40;
-    [ObservableProperty] private double? _minWindowValue = -40;
-    [ObservableProperty] private double? _lowerWindowValue;
-    [ObservableProperty] private double? _upperWindowValue;
-    partial void OnUpperWindowValueChanged(double? value) => _dicom.SetUpperWindowLevel((double)value);
-    partial void OnLowerWindowValueChanged(double? value) => _dicom.SetLowerWindowLevel((double)value);
+    [ObservableProperty] private double _maxWindowValue = 40;
+    [ObservableProperty] private double _minWindowValue = -40;
+    [ObservableProperty] private double _lowerWindowValue;
+    [ObservableProperty] private double _upperWindowValue;
+    partial void OnUpperWindowValueChanged(double value) => _dicom.Data.UpperWindowValue = (double)value;
+
+    partial void OnLowerWindowValueChanged(double value) => _dicom.Data.LowerWindowValue = (double)value;
 
     //current frame slider
     [ObservableProperty] private int _currentFrame;
     [ObservableProperty] private int _maxFrames;
 
-    partial void OnCurrentFrameChanged(int value) => _dicom.SetFrame(value);
+    partial void OnCurrentFrameChanged(int value) => _dicom.Data.CurrentFrame = value;
 
     //test image
     [ObservableProperty] private bool _showTestImage = false;
@@ -62,13 +63,10 @@ public partial class ImageViewModel {
 
     public ImageViewModel() {
         _dicom = App.AppHost.Services.GetService<IDicomService>();
-
-        _dicom.OnNewFrame += NewFrame;
-        _dicom.OnDicomImageUpdated += ImageUpdated;
+        _dicom.OnDatasetLoaded += DatasetLoaded;
 
         _imageService = App.AppHost.Services.GetService<IImageOverlayService>();
         _imageService.OnImageUpdated += OverlayImageUpdated;
-
 
         WeakReferenceMessenger.Default.Register<InfoMessage>(this, (r, m) => {
             InfoText = m.Value;
@@ -85,31 +83,39 @@ public partial class ImageViewModel {
         _mouseTool = new MouseFill(_dicom, _imageService);
     }
 
+    private void DatasetLoaded() {
+
+        _dicom.Data.OnNewFrame += NewFrame;
+        _dicom.Data.OnImageUpdated += ImageUpdated;
+
+        NewFrame();
+        ImageUpdated();
+    }
+
     private void NewFrame() {
         ShowFrameSlider = _dicom.Data.FrameCount > 1;
 
         //frame slider
-        CurrentFrame = _dicom.CurrentFrame;
-        MaxFrames = _dicom.FrameCount - 1;
+        CurrentFrame = _dicom.Data.CurrentFrame;
+        MaxFrames = _dicom.Data.FrameCount - 1;
 
         //window level slider
-        MinWindowValue = _dicom.MinWindowLevel;
-        MaxWindowValue = _dicom.MaxWindowLevel;
+        MinWindowValue = _dicom.Data.CurrentSlice.MinValue;
+        MaxWindowValue = _dicom.Data.CurrentSlice.MaxValue;
+
+        LowerWindowValue = _dicom.Data.LowerWindowValue;
+        UpperWindowValue = _dicom.Data.UpperWindowValue;
 
         //text
-        LayerText = _dicom.FrameText;
+        LayerText = _dicom.Data.CurrentSlice.FrameText;
     }
 
     private void ImageUpdated() {
         //window level slider
-        LowerWindowValue = _dicom.LowerWindowValue;
-        UpperWindowValue = _dicom.UpperWindowValue;
+        LowerWindowValue = _dicom.Data.LowerWindowValue;
+        UpperWindowValue = _dicom.Data.UpperWindowValue;
 
-        DisplayImage = _dicom.GetDicomImage;
-    }
-
-    private void WindowLevelChanged() {
-        
+        DisplayImage = _dicom.Data.CurrentSlice.GetWindowedImage(LowerWindowValue, UpperWindowValue);
     }
 
     //layer images
@@ -146,7 +152,7 @@ class MouseHUReader : IMouseTool {
 
     public void OnMouseMove(Point point) {
         if (!_isMouseCaptured) return;
-        double pointValue = _dicom.Data.GetHU(point);
+        double pointValue = _dicom.Data.CurrentSlice.GetHU(point);
         string text = $"X: {point.X}\r\nY: {point.Y}\r\nHU: {pointValue}";
         WeakReferenceMessenger.Default.Send(new InfoMessage(text));
     }
@@ -174,7 +180,7 @@ class MouseFill : IMouseTool {
     public IImageOverlayService Image { get; }
 
     public void OnMouseDown(Point point) {
-        double pointValue = _dicom.Data.GetHU(point);
+        double pointValue = _dicom.Data.CurrentSlice.GetHU(point);
         //testing
         string text = $"X: {point.X}\r\nY: {point.Y}\r\nHU: {pointValue}";
         WeakReferenceMessenger.Default.Send(new InfoMessage(text));
@@ -201,11 +207,11 @@ class MouseFill : IMouseTool {
     }
 
     private void NewFrame() {
-        int frameNumber = _dicom.CurrentFrame;
+        int frameNumber = _dicom.Data.CurrentFrame;
     }
 
     private void GetFillPoints(Point point, double pointValue) {
-        _pixelmap = _dicom.Data.GetHUs(); //HU values from the dicom image
+        _pixelmap = _dicom.Data.CurrentSlice.GetHUs(); //HU values from the dicom image
         //preping the bool array
         //used to flag a spot has already been inspected
         _imageHeight = _pixelmap.GetLength(0);
@@ -224,9 +230,8 @@ class MouseFill : IMouseTool {
         _image.SetImage(bitmap);
 
         //calculate area
-        var areaPerPixel = _dicom.Data.AreaPerPixel;
-        var selectedArea = _points.Count * areaPerPixel;
-        WeakReferenceMessenger.Default.Send<DicomDetailsMessage>(new DicomDetailsMessage($"Info\r\n\r\nSelected Area: {selectedArea.ToString("0.00")}"));
+        var selectedArea = _points.Count * _dicom.Data.PixelVolume;
+        WeakReferenceMessenger.Default.Send<DicomDetailsMessage>(new DicomDetailsMessage($"Info\r\n\r\nSelected Volume: {selectedArea.ToString("0.00")}"));
     }
 
     private void GetSurroundingPoints(int pX, int pY) {
