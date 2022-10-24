@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using System;
+using System.Windows;
 
 namespace BolusEvaluator.MVVM.ViewModels;
 
@@ -53,6 +54,7 @@ public partial class MainViewModel {
 
         WeakReferenceMessenger.Default.Register<IsBusyMessage>(this, (r, m) => {
             IsBusy = m.Value;
+            
         });
 
         IsBusy = false;
@@ -80,6 +82,11 @@ public partial class MainViewModel {
         }
 
         ControlImageFlyoutOpen = !ControlImageFlyoutOpen;
+    }
+
+    [RelayCommand]
+    public void TestKey() {
+        MessageBox.Show("Right arrow!");
     }
 }
 

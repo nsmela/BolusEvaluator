@@ -13,6 +13,12 @@
     <UserControl.Resources>
         <local1:BooleanToVisibilityConverter x:Key="b2vconv"/>
     </UserControl.Resources>
+    <UserControl.InputBindings>
+        <KeyBinding Command="{Binding Path=IncrementFrameCommand}" Gesture="Right"/>
+        <KeyBinding Command="{Binding Path=DecrementFrameCommand}" Gesture="Left"/>
+        <KeyBinding Command="{Binding Path=IncrementWindowCenterCommand}" Gesture="Up"/>
+        <KeyBinding Command="{Binding Path=DecrementWindowCenterCommand}" Gesture="Down"/>
+    </UserControl.InputBindings>
     <Grid Background="Transparent" Margin="4" >
         <Border BorderBrush="Black" BorderThickness="3" CornerRadius="8">
             <Grid >
@@ -39,7 +45,8 @@
                     <Canvas 
                     Height="512" Width="512"
                     HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
+                    VerticalAlignment="Center"
+                      >
 
                         <controls:ZoomBorder>
                             <Image Stretch="None">

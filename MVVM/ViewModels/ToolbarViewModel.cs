@@ -171,3 +171,5 @@ public class HighlightWindowTool : IImageTools {
 
 
 
+
+

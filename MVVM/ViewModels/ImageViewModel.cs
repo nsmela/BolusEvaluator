@@ -3,9 +3,11 @@ using BolusEvaluator.Services.DicomService;
 using BolusEvaluator.Services.ImageOverlayService;
 using BolusEvaluator.Services.InputService;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Point = System.Windows.Point;
@@ -57,6 +59,30 @@ public partial class ImageViewModel {
 
     //mouse inputs
     private IMouseTool _mouseTool;
+
+    //keyboard commands
+    [RelayCommand]
+    public void IncrementFrame() {
+        if (MaxFrames < 2 || CurrentFrame >= MaxFrames) return;
+        CurrentFrame++;
+    }
+    [RelayCommand]
+    public void DecrementFrame() {
+        if (CurrentFrame < 1) return;
+        CurrentFrame--;
+    }
+
+    [RelayCommand]
+    public void IncrementWindowCenter() {
+        UpperWindowValue += 50;
+        LowerWindowValue += 50;
+    }
+
+    [RelayCommand]
+    public void DecrementWindowCenter() {
+        UpperWindowValue -= 50;
+        LowerWindowValue -= 50;
+    }
 
     public ImageViewModel() {
         _dicom = App.AppHost.Services.GetService<IDicomService>();
@@ -159,32 +185,44 @@ class MouseHUReader : IMouseTool {
 }
 
 class MouseFill : IMouseTool {
-    private readonly IDicomService _dicom;
-    private readonly IImageOverlayService _image;
+    private readonly IDicomService _dicomService;
+    private readonly IImageOverlayService _imageService;
     private bool[,] _isChecked;
     private int _imageHeight, _imageWidth;
     private double[,] _pixelmap;
 
     private double _lowerWindow, _upperWindow;
+    private Dictionary<int, SliceHighlight> _images; //image per frame
     private List<Point> _points;
     private Stack<Point> _stack;
 
     public MouseFill(IDicomService dicom, IImageOverlayService image) {
-        _dicom = dicom;
-        _image = image;
+        _dicomService = dicom;
+        _imageService = image;
+
+        _dicomService.OnDatasetLoaded += OnOpen;
     }
 
-    public IImageOverlayService Image { get; }
+    public void OnOpen() {
+        _images = new();
+        _dicomService.Data.OnNewFrame += NewFrame;
+        WeakReferenceMessenger.Default.Send<DicomDetailsMessage>(new DicomDetailsMessage($"Info\r\n\r\nNo highlights"));
+    }
+
+    public void OnClose() {
+        _dicomService.Data.OnNewFrame -= NewFrame;
+        _images.Clear();
+    }
 
     public void OnMouseDown(Point point) {
-        double pointValue = _dicom.Data.CurrentSlice.GetHU(point);
+        double pointValue = _dicomService.Data.CurrentSlice.GetHU(point);
         //testing
         string text = $"X: {point.X}\r\nY: {point.Y}\r\nHU: {pointValue.ToString("0.0")}";
         WeakReferenceMessenger.Default.Send(new InfoMessage(text));
 
         //caching values
-        _lowerWindow = _dicom.Data.LowerWindowValue;
-        _upperWindow = _dicom.Data.UpperWindowValue;
+        _lowerWindow = _dicomService.Data.LowerWindowValue;
+        _upperWindow = _dicomService.Data.UpperWindowValue;
 
         //is outside the displayed window
         if (pointValue < _lowerWindow ||
@@ -204,13 +242,21 @@ class MouseFill : IMouseTool {
     }
 
     private void NewFrame() {
-        int frameNumber = _dicom.Data.CurrentFrame;
+        int frameNumber = _dicomService.Data.CurrentFrame;
+        if (!_images.ContainsKey(frameNumber)) {
+            _imageService.ClearImage();
+        } else {
+            _imageService.SetImage(_images[frameNumber].Image);
+        }
+
+        SendMessage();
+
     }
 
     //TODO: Use a Stack list instead of recursion.
     //current way leads to possible stack overflow
     private void GetFillPoints(Point point, double pointValue) {
-        _pixelmap = _dicom.Data.CurrentSlice.GetHUs(); //HU values from the dicom image
+        _pixelmap = _dicomService.Data.CurrentSlice.GetHUs(); //HU values from the dicom image
         //preping the bool array
         //used to flag a spot has already been inspected
         _imageHeight = _pixelmap.GetLength(0);
@@ -220,21 +266,36 @@ class MouseFill : IMouseTool {
         _points = new(); //output
         _stack = new(); //temp storage
 
-        //initial click
+        //find all relevant pixels
         _stack.Push(new Point(point.X, point.Y));
         while (_stack.Count > 0) {
             GetSurroundingPoints(_stack.Pop());
         }
 
+        //create filled image
         var bitmap = BitmapFactory.New(_imageWidth, _imageHeight);
         _points.ForEach((point) => {
             bitmap.SetPixel((int)point.X, (int)point.Y, Colors.Blue);
         });
-        _image.SetImage(bitmap);
+        _imageService.SetImage(bitmap);
+
+        //store value
+        var frameIndex = _dicomService.Data.CurrentFrame;
+        var slice = new SliceHighlight {
+            Image = bitmap,
+            Points = _points
+        };
+
+        if (_images.ContainsKey(frameIndex)) {
+
+            _images[frameIndex] = slice;
+
+        } else {
+            _images.Add(frameIndex, slice);
+        }
 
         //calculate area
-        var selectedArea = _points.Count * _dicom.Data.PixelVolume / 1000;
-        WeakReferenceMessenger.Default.Send<DicomDetailsMessage>(new DicomDetailsMessage($"Info\r\n\r\nSelected Volume: {selectedArea.ToString("0.00")} mL"));
+        SendMessage();    
     }
 
     private void GetSurroundingPoints(Point point) {
@@ -264,4 +325,27 @@ class MouseFill : IMouseTool {
         
     }
 
+    private double TotalVolume() {
+        var volumePerPixel = _dicomService.Data.PixelVolume / 1000;
+        double value = 0;
+        foreach(var slice in _images) value += slice.Value.Points.Count * volumePerPixel;
+        return value;
+    }
+
+    private void SendMessage() {
+        var frameNumber = _dicomService.Data.CurrentFrame;
+        if (!_images.ContainsKey(frameNumber)) {
+            _imageService.ClearImage();
+            WeakReferenceMessenger.Default.Send<DicomDetailsMessage>(new DicomDetailsMessage($"Info\r\n\r\nNo highlights"));
+            return;
+        }
+
+        var selectedArea = _images[frameNumber].Points.Count * _dicomService.Data.PixelVolume / 1000;
+        WeakReferenceMessenger.Default.Send<DicomDetailsMessage>(new DicomDetailsMessage($"Info\r\n\r\nSelected Volume: {selectedArea.ToString("0.00")} mL\r\nTotal Volume: {TotalVolume().ToString("0.00")}"));
+
+    }
+}
+struct SliceHighlight {
+    public WriteableBitmap Image { get; set; }
+    public List<Point> Points { get; set; }
 }

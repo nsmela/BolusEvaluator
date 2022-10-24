@@ -19,7 +19,9 @@
     <mah:MetroWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </mah:MetroWindow.Resources>
-    
+    <mah:MetroWindow.InputBindings >
+        <KeyBinding Command="{Binding TestKeyCommand}" Gesture="Right" />
+    </mah:MetroWindow.InputBindings>
     <mah:MetroWindow.Flyouts>
         <mah:FlyoutsControl>
             <mah:Flyout Header="DICOM Headers" IsOpen="{Binding DicomDumpFlyoutOpen}" Position="Right" Width="360">
@@ -42,6 +44,12 @@
     </mah:MetroWindow.Flyouts>
     
     <Grid Background="DimGray">
+        <Grid.InputBindings>
+            <KeyBinding 
+                Key="Right"
+                Command=""/>
+        </Grid.InputBindings>
+        
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="auto" />
             <ColumnDefinition Width="*" />
@@ -65,8 +73,8 @@
 
 
         <!-- Image View -->
-        <views:ImageView Grid.Column="0" Grid.Row="1" Grid.RowSpan="2" MinWidth="600" MinHeight="600"/>
-        
+        <views:ImageView Grid.Column="0" Grid.Row="1" Grid.RowSpan="2" MinWidth="600" MinHeight="600" />
+
         <!-- Text Area -->
         <TextBlock Grid.Column="1" Grid.Row="1" Grid.RowSpan="2" Margin="8" Text="{Binding DetailsInfo}"/>
     </Grid>

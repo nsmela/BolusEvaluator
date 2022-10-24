@@ -14,5 +14,6 @@ public partial class MainView : MetroWindow {
         DataContext = new MainViewModel();
         InitializeComponent();
     }
+
 }
 

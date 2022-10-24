@@ -25,6 +25,7 @@ public class ImageOverlayService : IImageOverlayService {
     }
 
     public void ClearImage() {
+        if (OverlayImage is null) return;
         OverlayImage = BitmapFactory.New(OverlayImage.PixelWidth, OverlayImage.PixelHeight);
         OnImageUpdated?.Invoke();
     }
