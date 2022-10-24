@@ -121,18 +121,18 @@ public class Slice {
         Data = data;
         Image = new DicomImage(Data);
 
+        _rescaleSlope = Data.GetSingleValue<double>(DicomTag.RescaleSlope);
+        _rescaleIntercept = Data.GetSingleValue<double>(DicomTag.RescaleIntercept);
+
         var position = Data.TryGetValues<double>(DicomTag.ImagePositionPatient, out var pos) ? pos : Array.Empty<double>();
         Position = new Point3D((float)position[0], (float)position[1], (float)position[2]);
 
         var header = DicomPixelData.Create(Data);
         PixelMap = (PixelDataFactory.Create(header, 0));
 
-        var dicomRanges = PixelMap.GetMinMax();
-        MinValue = dicomRanges.Minimum;
-        MaxValue = dicomRanges.Maximum;
-
-        _rescaleSlope = Data.GetSingleValue<double>(DicomTag.RescaleSlope);
-        _rescaleIntercept = Data.GetSingleValue<double>(DicomTag.RescaleIntercept);
+        GetMinMaxHUs(GetHUs(), out double min, out double max);
+        MinValue = min;
+        MaxValue = max;
     }
 
     public WriteableBitmap GetWindowedImage(double lowerWindow, double upperWindow) {
@@ -141,19 +141,8 @@ public class Slice {
         return Image.RenderImage().AsWriteableBitmap();
     }
 
-    public string FrameText {
-        get {
-            if (Data is null) return string.Empty;
+    public string FrameText => $"Position: {Position.X.ToString("0.00")} {Position.Y.ToString("0.00")} {Position.Z.ToString("0.00")}";
 
-            var patientPosition = Data.TryGetValues<double>(DicomTag.ImagePositionPatient, out var pos) ? pos : Array.Empty<double>();
-            if (patientPosition == Array.Empty<double>()) {
-                return string.Empty;
-            }
-            else {
-                return $"Position: {patientPosition[0].ToString("0.00")} {patientPosition[1].ToString("0.00")} {patientPosition[2].ToString("0.00")}";
-            }
-        }
-    }
 
     #region Pixel values
     //https://stackoverflow.com/questions/22991009/how-to-get-hounsfield-units-in-dicom-file-using-fellow-oak-dicom-library-in-c-sh
@@ -186,6 +175,15 @@ public class Slice {
                 return ((GrayscalePixelDataS16)pixelMap).Data[index] * _rescaleSlope + _rescaleIntercept;
             default:
                 return 0.0f;
+        }
+    }
+
+    private void GetMinMaxHUs(double[,] pixels, out double min, out double max) {
+        min = 0.0f;
+        max = 1.0f;
+        foreach(var pixel in pixels) {
+            if(pixel < min) min = pixel;
+            if(pixel > max) max = pixel;
         }
     }
     #endregion

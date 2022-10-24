@@ -135,11 +135,13 @@ public class HighlightWindowTool : IImageTools {
     }
 
     public void OnBegin() {
+        if (_dicomService.Control is null) return;
         _dicomService.Control.OnImageUpdated += OnWindowLevelChanged;
         OnWindowLevelChanged();
     }
 
     public void OnEnd() {
+        if (_dicomService.Control is null) return;
         _dicomService.Control.OnImageUpdated -= OnWindowLevelChanged;
         _imageService.ClearImage();
     }

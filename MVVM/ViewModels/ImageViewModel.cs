@@ -153,7 +153,7 @@ class MouseHUReader : IMouseTool {
     public void OnMouseMove(Point point) {
         if (!_isMouseCaptured) return;
         double pointValue = _dicom.Data.CurrentSlice.GetHU(point);
-        string text = $"X: {point.X}\r\nY: {point.Y}\r\nHU: {pointValue}";
+        string text = $"X: {point.X}\r\nY: {point.Y}\r\nHU: {pointValue.ToString("0.0")}";
         WeakReferenceMessenger.Default.Send(new InfoMessage(text));
     }
 
@@ -171,6 +171,7 @@ class MouseFill : IMouseTool {
 
     private double _lowerWindow, _upperWindow;
     private List<Point> _points;
+    private Stack<Point> _stack;
 
     public MouseFill(IDicomService dicom, IImageOverlayService image) {
         _dicom = dicom;
@@ -182,7 +183,7 @@ class MouseFill : IMouseTool {
     public void OnMouseDown(Point point) {
         double pointValue = _dicom.Data.CurrentSlice.GetHU(point);
         //testing
-        string text = $"X: {point.X}\r\nY: {point.Y}\r\nHU: {pointValue}";
+        string text = $"X: {point.X}\r\nY: {point.Y}\r\nHU: {pointValue.ToString("0.0")}";
         WeakReferenceMessenger.Default.Send(new InfoMessage(text));
 
         //caching values
@@ -210,6 +211,8 @@ class MouseFill : IMouseTool {
         int frameNumber = _dicom.Data.CurrentFrame;
     }
 
+    //TODO: Use a Stack list instead of recursion.
+    //current way leads to possible stack overflow
     private void GetFillPoints(Point point, double pointValue) {
         _pixelmap = _dicom.Data.CurrentSlice.GetHUs(); //HU values from the dicom image
         //preping the bool array
@@ -219,9 +222,13 @@ class MouseFill : IMouseTool {
         _isChecked = new bool[_imageHeight, _imageWidth];
 
         _points = new(); //output
+        _stack = new(); //temp storage
 
-        _points.Add(new Point(point.X, point.Y)); //initial click
-        GetSurroundingPoints((int)point.X, (int)point.Y); //recursive method
+        //initial click
+        _stack.Push(new Point(point.X, point.Y));
+        while (_stack.Count > 0) {
+            GetSurroundingPoints(_stack.Pop());
+        }
 
         var bitmap = BitmapFactory.New(_imageWidth, _imageHeight);
         _points.ForEach((point) => {
@@ -230,11 +237,14 @@ class MouseFill : IMouseTool {
         _image.SetImage(bitmap);
 
         //calculate area
-        var selectedArea = _points.Count * _dicom.Data.PixelVolume;
-        WeakReferenceMessenger.Default.Send<DicomDetailsMessage>(new DicomDetailsMessage($"Info\r\n\r\nSelected Volume: {selectedArea.ToString("0.00")}"));
+        var selectedArea = _points.Count * _dicom.Data.PixelVolume / 1000;
+        WeakReferenceMessenger.Default.Send<DicomDetailsMessage>(new DicomDetailsMessage($"Info\r\n\r\nSelected Volume: {selectedArea.ToString("0.00")} mL"));
     }
 
-    private void GetSurroundingPoints(int pX, int pY) {
+    private void GetSurroundingPoints(Point point) {
+        int pX = (int)point.X;
+        int pY = (int)point.Y;
+
         //setting the limits for the search
         int start_x = 0, start_y = 0, end_x = _imageWidth - 1, end_y = _imageHeight - 1;
         if (pX > start_x) start_x = pX - 1;
@@ -244,17 +254,15 @@ class MouseFill : IMouseTool {
 
         for (int x = start_x; x <= end_x; x++) {
             for (int y = start_y; y <= end_y; y++) {
-                if (_isChecked[x, y]) 
-                    continue; //already been inspected, skip
-                var pixelValue = _pixelmap[x, y];
+                if (_isChecked[x, y]) continue; //already been inspected, skip
                 _isChecked[x, y] = true; //remove it from being checked again
-                if (pixelValue < _lowerWindow || pixelValue > _upperWindow) //if not within the window
-                    continue;
+                var pixelValue = _pixelmap[x, y];
+                if (pixelValue < _lowerWindow || pixelValue > _upperWindow) continue; //if not within the window
 
                 //if valid
-                _points.Add(new Point(x, y));
-                GetSurroundingPoints(x, y); //recursion
-
+                var newPoint = new Point(x, y);
+                _points.Add(newPoint);
+                _stack.Push(newPoint);
             }
         }
         
