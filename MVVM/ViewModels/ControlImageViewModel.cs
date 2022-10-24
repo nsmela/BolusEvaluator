@@ -17,8 +17,8 @@ namespace BolusEvaluator.MVVM.ViewModels;
 
 [ObservableObject]
 public partial class ControlImageViewModel {
-    private readonly IDicomService _dicom;
-    private DicomSet _data => _dicom.Control;
+    private readonly IDicomService _dicomService;
+    private DicomSet _data => _dicomService.Control;
 
     [ObservableProperty] private Color _controlColor;
 
@@ -35,15 +35,15 @@ public partial class ControlImageViewModel {
     [ObservableProperty] private double _minWindowValue = -40;
     [ObservableProperty] private double _lowerWindowValue;
     [ObservableProperty] private double _upperWindowValue;
-    partial void OnUpperWindowValueChanged(double value) => SetUpperWindowLevel(value);
-    partial void OnLowerWindowValueChanged(double value) => SetLowerWindowLevel(value);
+    partial void OnUpperWindowValueChanged(double value) => _dicomService.Control.UpperWindowValue = (double)value;
+    partial void OnLowerWindowValueChanged(double value) => _dicomService.Control.LowerWindowValue = (double)value;
 
     //current frame slider
-    [ObservableProperty] private bool _showFramesSlider = false;
+    [ObservableProperty] private bool _showFrameSlider = false;
     [ObservableProperty] private int _currentFrame;
     [ObservableProperty] private int _maxFrames;
 
-    partial void OnCurrentFrameChanged(int value) => SetFrame(value);
+    partial void OnCurrentFrameChanged(int value) => _dicomService.Control.CurrentFrame = value;
 
     //test image
     [ObservableProperty] private bool _showTestImage = false;
@@ -70,12 +70,12 @@ public partial class ControlImageViewModel {
             //generating an image
             var file = await DicomFile.OpenAsync(openFile.FileName);
             var dataset = await GetData(openFile);
-            _dicom.LoadControlDicomSet(dataset);
+            await _dicomService.LoadControlDicomSet(dataset);
 
-            _dicom.Control.OnNewFrame += NewFrame;
-            _dicom.Control.OnImageUpdated += ImageUpdated;
+            _dicomService.Control.OnNewFrame += NewFrame;
+            _dicomService.Control.OnImageUpdated += ImageUpdated;
 
-            ShowFramesSlider = _data.FrameCount > 1;
+            ShowFrameSlider = _data.FrameCount > 1;
             ShowWindowSlider = true;
             
 
@@ -86,46 +86,43 @@ public partial class ControlImageViewModel {
     }
 
     public ControlImageViewModel() {
-        _dicom = App.AppHost.Services.GetService<IDicomService>();
+        _dicomService = App.AppHost.Services.GetService<IDicomService>();
+        _dicomService.OnControlLoaded += DatasetLoaded;
     }
 
-    private void SetUpperWindowLevel(double? value) {
-        if (_data is null) return;
+    private void DatasetLoaded() {
 
-        _dicom.Control.UpperWindowValue = (double)value;
-    }
+        _dicomService.Control.OnNewFrame += NewFrame;
+        _dicomService.Control.OnImageUpdated += ImageUpdated;
 
-    private void SetLowerWindowLevel(double? value) {
-        if (_data is null) return;
-
-        _dicom.Control.LowerWindowValue = (double)value;
-    }
-
-    private void SetFrame(int value) {
-        if (_data is null) return;
-
-        
+        NewFrame();
+        ImageUpdated();
     }
 
     private void NewFrame() {
+        ShowFrameSlider = _dicomService.Data.FrameCount > 1;
+
         //frame slider
-        CurrentFrame = _data.CurrentFrame;
-        MaxFrames = _data.FrameCount;
+        CurrentFrame = _dicomService.Data.CurrentFrame;
+        MaxFrames = _dicomService.Data.FrameCount - 1;
 
         //window level slider
-        MinWindowValue = _data.CurrentSlice.MinValue;
-        MaxWindowValue = _data.CurrentSlice.MaxValue;
+        MinWindowValue = _dicomService.Data.CurrentSlice.MinValue;
+        MaxWindowValue = _dicomService.Data.CurrentSlice.MaxValue;
+
+        LowerWindowValue = _dicomService.Data.LowerWindowValue;
+        UpperWindowValue = _dicomService.Data.UpperWindowValue;
 
         //text
-        LayerText = _data.CurrentSlice.FrameText;
+        LayerText = _dicomService.Data.CurrentSlice.FrameText;
     }
 
     private void ImageUpdated() {
         //window level slider
-        LowerWindowValue = _data.LowerWindowValue;
-        UpperWindowValue = _data.UpperWindowValue;
+        LowerWindowValue = _dicomService.Data.LowerWindowValue;
+        UpperWindowValue = _dicomService.Data.UpperWindowValue;
 
-        DisplayImage = _data.CurrentSlice.GetWindowedImage(LowerWindowValue, UpperWindowValue);
+        DisplayImage = _dicomService.Data.CurrentSlice.GetWindowedImage(LowerWindowValue, UpperWindowValue);
     }
 
     private async Task<List<DicomDataset>> GetData(OpenFileDialog fileDialog) {

@@ -103,8 +103,6 @@ public class DicomSet  {
             System.Windows.MessageBox.Show("DicomSet Error: " + e.Message + "\r\n" + e.InnerException);
         }
     }
-
-
 }
 
 public class Slice {

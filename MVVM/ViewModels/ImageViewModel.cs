@@ -6,9 +6,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Point = System.Windows.Point;
@@ -84,7 +81,6 @@ public partial class ImageViewModel {
     }
 
     private void DatasetLoaded() {
-
         _dicom.Data.OnNewFrame += NewFrame;
         _dicom.Data.OnImageUpdated += ImageUpdated;
 
