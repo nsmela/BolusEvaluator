@@ -165,7 +165,7 @@ public class Slice {
     private double GetHUValue(IPixelData pixelMap, int iX, int iY) {
         if (pixelMap is null) return -2000;
 
-        int index = (int)(iX + pixelMap.Width * iY);
+        int index = (int)(iX + pixelMap.Width * iY); //turning a 2D array index into a 1D index
         switch (pixelMap) {
             case GrayscalePixelDataU16:
                 return ((GrayscalePixelDataU16)pixelMap).Data[index] * _rescaleSlope + _rescaleIntercept;
@@ -176,6 +176,7 @@ public class Slice {
         }
     }
 
+    //the default GetMinMax from fo-DICOM doesn't work as well as I hoped. This does it manually
     private void GetMinMaxHUs(double[,] pixels, out double min, out double max) {
         min = 0.0f;
         max = 1.0f;

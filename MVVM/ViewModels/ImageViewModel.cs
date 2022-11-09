@@ -226,8 +226,12 @@ class MouseFill : IMouseTool {
 
         //is outside the displayed window
         if (pointValue < _lowerWindow ||
-            pointValue > _upperWindow)
+            pointValue > _upperWindow) {
+            ClearCurrentFrame();
+            SendMessage();
             return;
+        }
+          
 
         GetFillPoints(point, pointValue);
 
@@ -251,6 +255,11 @@ class MouseFill : IMouseTool {
 
         SendMessage();
 
+    }
+
+    private void ClearCurrentFrame() {
+        var frameIndex = _dicomService.Data.CurrentFrame;
+        _images.Remove(frameIndex);
     }
 
     //TODO: Use a Stack list instead of recursion.
