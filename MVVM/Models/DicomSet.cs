@@ -13,6 +13,7 @@ public class DicomSet  {
 
     public event Action OnNewFrame, OnImageUpdated;
     List<Slice> _slices;
+    public List<Slice> Slices => _slices;
 
     private int _currentFrame;    
     public int FrameCount => _slices.Count;

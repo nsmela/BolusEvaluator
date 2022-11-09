@@ -193,8 +193,6 @@ class MouseFill : IMouseTool {
 
     private double _lowerWindow, _upperWindow;
     private Dictionary<int, SliceHighlight> _images; //image per frame
-    private List<Point> _points;
-    private Stack<Point> _stack;
 
     public MouseFill(IDicomService dicom, IImageOverlayService image) {
         _dicomService = dicom;
@@ -265,73 +263,103 @@ class MouseFill : IMouseTool {
     //TODO: Use a Stack list instead of recursion.
     //current way leads to possible stack overflow
     private void GetFillPoints(Point point, double pointValue) {
-        _pixelmap = _dicomService.Data.CurrentSlice.GetHUs(); //HU values from the dicom image
-        //preping the bool array
+        _images = new();
+
         //used to flag a spot has already been inspected
-        _imageHeight = _pixelmap.GetLength(0);
-        _imageWidth = _pixelmap.GetLength(1);
-        _isChecked = new bool[_imageHeight, _imageWidth];
+        var frameCount = _dicomService.Data.Slices.Count;
 
-        _points = new(); //output
-        _stack = new(); //temp storage
+        //Arrays for checking
+        var frameStack = new Stack<int>(); //the frames to check
+        frameStack.Push(_dicomService.Data.CurrentFrame); //add our current frame to check first and propagate from there
+        var points = new List<Point>();
+        points.Add(point);
 
-        //find all relevant pixels
-        _stack.Push(new Point(point.X, point.Y));
-        while (_stack.Count > 0) {
-            GetSurroundingPoints(_stack.Pop());
+        //find all relevant pixels on all frames
+        while (frameStack.Count > 0) {
+            var frame = frameStack.Pop();
+            var pixelMap = _dicomService.Data.Slices[frame].GetHUs(); //HU values from the dicom image
+            var imageHeight = pixelMap.GetLength(0);
+            var imageWidth = pixelMap.GetLength(1);
+            points = GetFillPointsFromFrame(pixelMap, imageWidth, imageHeight, _lowerWindow, _upperWindow, points); //replacing old points with new
+
+            if(points is null || points.Count < 1) continue;  //if there were no good points
+
+            //create filled image based on new points
+            var bitmap = GenerateBitmap(imageWidth, imageHeight, points, Colors.Blue);
+
+            //store value
+            SaveFrame(frame, bitmap, points);
+
+            //add more frames to check if this one had points
+            //if (frame > 0) frameStack.Push(frame - 1);
+            if (frame < frameCount - 1) frameStack.Push(frame + 1); 
         }
 
-        //create filled image
-        var bitmap = BitmapFactory.New(_imageWidth, _imageHeight);
-        _points.ForEach((point) => {
-            bitmap.SetPixel((int)point.X, (int)point.Y, Colors.Blue);
-        });
-        _imageService.SetImage(bitmap);
+        //update image and messages
+        NewFrame();
+    }
 
-        //store value
-        var frameIndex = _dicomService.Data.CurrentFrame;
+
+    private List<Point> GetFillPointsFromFrame(double[,] pixelMap, int frameWidth, int frameHeight, double windowMin, double windowMax, List<Point> startingPoints) {
+        List<Point> points = new List<Point>(); //output
+        var isChecked = new bool[frameHeight, frameWidth]; //skip pixels already checked
+        Stack<Point> stack = new Stack<Point>(); //queued points to check
+        startingPoints.ForEach(x => stack.Push(x)); //load the starting points into the queue
+
+        while (stack.Count > 0) {
+            var point = stack.Pop(); //removes point from the stack
+
+            int pX = (int)point.X;
+            int pY = (int)point.Y;
+
+            //setting the limits for the search
+            int start_x = 0, start_y = 0, end_x = frameWidth - 1, end_y = frameHeight - 1;
+            if (pX > start_x) start_x = pX - 1;
+            if (pX < end_x) end_x = pX + 1;
+            if (pY > start_y) start_y = pY - 1;
+            if (pY < end_y) end_y = pY + 1;
+
+            for (int x = start_x; x <= end_x; x++) {
+                for (int y = start_y; y <= end_y; y++) {
+                    if (isChecked[x, y]) continue; //already been inspected, skip
+
+                    isChecked[x, y] = true; //remove it from being checked again
+                    var pixelValue = pixelMap[x, y];
+                    if (pixelValue < windowMin || pixelValue > windowMax) continue; //if not within the window
+
+                    //if valid
+                    var newPoint = new Point(x, y);
+                    points.Add(newPoint);
+                    stack.Push(newPoint);
+                }
+            }
+        }
+
+        return points;
+    }
+
+    private WriteableBitmap GenerateBitmap(int width, int height, List<Point> points, Color color) {
+        //create filled image
+        var bitmap = BitmapFactory.New(width, height);
+        points.ForEach((point) => {
+            bitmap.SetPixel((int)point.X, (int)point.Y, color);
+        });
+        return bitmap;
+    }
+
+    private void SaveFrame(int frameIndex, WriteableBitmap bitmap, List<Point> points) {
         var slice = new SliceHighlight {
             Image = bitmap,
-            Points = _points
+            Points = points
         };
 
         if (_images.ContainsKey(frameIndex)) {
-
+            //replace frame
             _images[frameIndex] = slice;
 
         } else {
             _images.Add(frameIndex, slice);
         }
-
-        //calculate area
-        SendMessage();    
-    }
-
-    private void GetSurroundingPoints(Point point) {
-        int pX = (int)point.X;
-        int pY = (int)point.Y;
-
-        //setting the limits for the search
-        int start_x = 0, start_y = 0, end_x = _imageWidth - 1, end_y = _imageHeight - 1;
-        if (pX > start_x) start_x = pX - 1;
-        if (pX < end_x) end_x = pX + 1;
-        if(pY > start_y) start_y = pY - 1;
-        if(pY < end_y) end_y = pY + 1;
-
-        for (int x = start_x; x <= end_x; x++) {
-            for (int y = start_y; y <= end_y; y++) {
-                if (_isChecked[x, y]) continue; //already been inspected, skip
-                _isChecked[x, y] = true; //remove it from being checked again
-                var pixelValue = _pixelmap[x, y];
-                if (pixelValue < _lowerWindow || pixelValue > _upperWindow) continue; //if not within the window
-
-                //if valid
-                var newPoint = new Point(x, y);
-                _points.Add(newPoint);
-                _stack.Push(newPoint);
-            }
-        }
-        
     }
 
     private double TotalVolume() {
